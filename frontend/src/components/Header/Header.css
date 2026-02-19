@@ -1,0 +1,106 @@
+.main-header {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-48);
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-left,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-32);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin-right: var(--space-16);
+}
+
+.logo-icon {
+    color: var(--primary-blue);
+    font-size: 24px;
+}
+
+.logo-text {
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    font-size: 18px;
+}
+
+.header-nav {
+    display: flex;
+    gap: var(--space-24);
+}
+
+.nav-item {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    color: var(--text-main);
+}
+
+.nav-item.active {
+    font-weight: 600;
+}
+
+.health-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: 6px 12px;
+    background-color: var(--bg-muted);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.health-badge .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #CBD5E1;
+}
+
+.health-badge.running .status-dot {
+    background-color: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    background-color: #F1F5F9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}

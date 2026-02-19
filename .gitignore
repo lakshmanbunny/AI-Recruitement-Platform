@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.env
+paradigm_ai.db
+
+# Logs
+*.log
+agent_debug.log
+
+# Frontend
+node_modules/
+dist/
+.vite/
+.eslintcache
+
+# Project specific
+storage/
+brain/
+.gemini/
+.agent/
+temp_resumes/

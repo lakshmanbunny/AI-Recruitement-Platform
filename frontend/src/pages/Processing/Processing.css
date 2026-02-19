@@ -1,0 +1,112 @@
+.processing-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-56);
+    background-color: var(--bg-processing);
+}
+
+.processing-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-24);
+    text-align: center;
+    margin-bottom: var(--space-56);
+}
+
+.ai-animation-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-core {
+    z-index: 2;
+    color: var(--primary-blue);
+}
+
+.spinning-ai {
+    animation: spin 2s linear infinite;
+}
+
+.glow-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 102, 255, 0.2) 0%, transparent 70%);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+}
+
+.progress-list {
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    padding: var(--space-16);
+    background: var(--white);
+    border-radius: var(--radius-12);
+    border: 1px solid var(--border-light);
+    font-size: 14px;
+}
+
+.progress-step.completed {
+    color: var(--success-text);
+    border-color: var(--success-light);
+    background-color: var(--success-light);
+}
+
+.progress-step.active {
+    font-weight: 600;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 12px rgba(0, 102, 255, 0.1);
+}
+
+.progress-step.pending {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.progress-step.active .spin {
+    animation: spin 1s linear infinite;
+    color: var(--primary-blue);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

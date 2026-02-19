@@ -1,0 +1,131 @@
+.dashboard-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-56) var(--space-24);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-48);
+}
+
+.hero-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-16);
+}
+
+.hero-section h1 {
+    font-size: 48px;
+    letter-spacing: -1.5px;
+}
+
+.hero-subtext {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin-bottom: var(--space-8);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-24);
+}
+
+.stat-card {
+    padding: var(--space-24);
+    background: var(--white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    box-shadow: var(--shadow-soft);
+}
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+}
+
+.stat-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon-wrapper.blue {
+    background-color: #EFF6FF;
+    color: #3B82F6;
+}
+
+.stat-icon-wrapper.green {
+    background-color: #ECFDF5;
+    color: #10B981;
+}
+
+.stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.stat-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.empty-state {
+    margin-top: var(--space-24);
+    padding: var(--space-56);
+    background: var(--bg-muted);
+    border-radius: var(--radius-16);
+    border: 2px dashed var(--border-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-16);
+    text-align: center;
+}
+
+.empty-illustration {
+    width: 120px;
+    height: 120px;
+    background: white;
+    border-radius: var(--radius-12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-8);
+}
+
+.abstract-shape {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-blue);
+    opacity: 0.1;
+    border-radius: 50%;
+    position: relative;
+}
+
+.abstract-shape::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 30px;
+    height: 30px;
+    background: var(--primary-blue);
+    border-radius: 8px;
+    transform: rotate(45deg);
+}
