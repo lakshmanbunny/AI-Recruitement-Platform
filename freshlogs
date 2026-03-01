@@ -1,0 +1,477 @@
+INFO:     127.0.0.1:56367 - "OPTIONS /api/force-evaluate/VISHWATHOUTI247 HTTP/1.1" 200 OK
+[2026-03-01 12:18:24] [INFO] [app.services.pipeline_service] - [API] Force evaluating candidate: VISHWATHOUTI247
+[2026-03-01 12:18:24] [INFO] [app.services.pipeline_service] - [PIPELINE] Invoking AI Recruitment Pipeline (Force Eval: True)
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - Workflow initialized
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - Using 116 EXTERNAL resumes provided in state
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - Using SAMPLE Job Description (Fallback)
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - Preparing to index 116 resumes into LlamaIndex Enterprise Engine
+[2026-03-01 12:18:25] [INFO] [core.llama_indexing.resume_indexer] - [LLAMA INDEX BUILDING] Creating fresh LlamaIndex from resume data...
+[2026-03-01 12:18:25] [INFO] [core.llama_indexing.resume_indexer] - Created 0 LlamaIndex documents/chunks.
+[2026-03-01 12:18:25] [WARNING] [core.llama_indexing.resume_indexer] - [LLAMA INDEX] No documents created. Skipping index build.
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - 116 resumes successfully indexed in LlamaIndex.
+[2026-03-01 12:18:25] [INFO] [workflows.init_workflow] - Triggering Isolated LlamaIndex Retrieval per candidate against JD
+[2026-03-01 12:18:42] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104155
+[2026-03-01 12:18:43] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104061
+[2026-03-01 12:18:43] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104079
+[2026-03-01 12:18:43] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105015
+[2026-03-01 12:18:44] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104141
+[2026-03-01 12:18:45] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104105
+[2026-03-01 12:18:45] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101029
+[2026-03-01 12:18:45] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101149
+[2026-03-01 12:18:46] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104026
+[2026-03-01 12:18:46] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101153
+[2026-03-01 12:18:47] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101010
+[2026-03-01 12:18:47] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104104
+[2026-03-01 12:18:48] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101078
+[2026-03-01 12:18:48] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101027
+[2026-03-01 12:18:49] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101109
+[2026-03-01 12:18:49] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101131
+[2026-03-01 12:18:50] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105023
+[2026-03-01 12:18:50] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104149
+[2026-03-01 12:18:51] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104024
+[2026-03-01 12:18:51] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104070
+[2026-03-01 12:18:51] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104158
+[2026-03-01 12:18:52] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101008
+[2026-03-01 12:18:52] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101133
+[2026-03-01 12:18:53] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101091
+[2026-03-01 12:18:53] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101059
+[2026-03-01 12:18:53] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101049
+[2026-03-01 12:18:54] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101046
+[2026-03-01 12:18:54] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104051
+[2026-03-01 12:18:55] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101156
+[2026-03-01 12:18:55] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101086
+[2026-03-01 12:18:56] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104120
+[2026-03-01 12:18:56] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101040
+[2026-03-01 12:18:57] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104042
+[2026-03-01 12:18:57] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105018
+[2026-03-01 12:18:57] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101047
+[2026-03-01 12:18:58] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104020
+[2026-03-01 12:18:58] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104006
+[2026-03-01 12:18:59] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101019
+[2026-03-01 12:18:59] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104159
+[2026-03-01 12:19:00] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101056
+[2026-03-01 12:19:00] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104123
+[2026-03-01 12:19:01] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104124
+[2026-03-01 12:19:01] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105034
+[2026-03-01 12:19:02] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105021
+[2026-03-01 12:19:02] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104139
+[2026-03-01 12:19:02] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101033
+[2026-03-01 12:19:03] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101075
+[2026-03-01 12:19:03] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104134
+[2026-03-01 12:19:04] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101101
+[2026-03-01 12:19:04] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104083
+[2026-03-01 12:19:04] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104058
+[2026-03-01 12:19:05] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101137
+[2026-03-01 12:19:05] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101012
+[2026-03-01 12:19:06] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101018
+[2026-03-01 12:19:07] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101016
+[2026-03-01 12:19:08] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101144
+[2026-03-01 12:19:08] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101006
+[2026-03-01 12:19:09] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106023
+[2026-03-01 12:19:09] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104148
+[2026-03-01 12:19:09] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104060
+[2026-03-01 12:19:10] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101145
+[2026-03-01 12:19:10] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104078
+[2026-03-01 12:19:11] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104132
+[2026-03-01 12:19:11] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104106
+[2026-03-01 12:19:11] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106024
+[2026-03-01 12:19:12] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104164
+[2026-03-01 12:19:12] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104092
+[2026-03-01 12:19:13] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104087
+[2026-03-01 12:19:13] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104110
+[2026-03-01 12:19:14] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101057
+[2026-03-01 12:19:14] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104121
+[2026-03-01 12:19:14] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106018
+[2026-03-01 12:19:15] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105017
+[2026-03-01 12:19:15] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105013
+[2026-03-01 12:19:16] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101134
+[2026-03-01 12:19:16] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105030
+[2026-03-01 12:19:17] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101021
+[2026-03-01 12:19:17] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104153
+[2026-03-01 12:19:18] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104117
+[2026-03-01 12:19:19] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104095
+[2026-03-01 12:19:19] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105025
+[2026-03-01 12:19:20] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106017
+[2026-03-01 12:19:20] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104075
+[2026-03-01 12:19:20] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104161
+[2026-03-01 12:19:21] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101084
+[2026-03-01 12:19:21] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104129
+[2026-03-01 12:19:22] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101061
+[2026-03-01 12:19:22] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101136
+[2026-03-01 12:19:23] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104017
+[2026-03-01 12:19:23] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101143
+[2026-03-01 12:19:23] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101129
+[2026-03-01 12:19:24] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105026
+[2026-03-01 12:19:24] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101071
+[2026-03-01 12:19:25] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106027
+[2026-03-01 12:19:25] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101009
+[2026-03-01 12:19:25] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104067
+[2026-03-01 12:19:26] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104140
+[2026-03-01 12:19:26] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101124
+[2026-03-01 12:19:27] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104080
+[2026-03-01 12:19:27] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104023
+[2026-03-01 12:19:28] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104015
+[2026-03-01 12:19:28] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104028
+[2026-03-01 12:19:29] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0106028
+[2026-03-01 12:19:30] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101067
+[2026-03-01 12:19:30] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104025
+[2026-03-01 12:19:31] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101142
+[2026-03-01 12:19:31] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104022
+[2026-03-01 12:19:31] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105029
+[2026-03-01 12:19:32] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105037
+[2026-03-01 12:19:32] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101043
+[2026-03-01 12:19:33] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0105028
+[2026-03-01 12:19:33] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101031
+[2026-03-01 12:19:34] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101015
+[2026-03-01 12:19:34] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101138
+[2026-03-01 12:19:34] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0104093
+[2026-03-01 12:19:35] [INFO] [core.llama_indexing.resume_retriever] - [LLAMA RETRIEVAL ACTIVE] Performing isolated search for: 22wu0101127
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - --- Final LlamaIndex Candidate Ranking ---
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 1. 22WU0104155 (Munugoti  Aryan Sidharth) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 2. 22WU0104061 (Khethavath  Jayanth) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 3. 22WU0104079 (Nagendla Sourab Jhonson) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 4. 22WU0105015 (Kuncham  Hemanth) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 5. 22WU0104141 (Batikiri Bhuvin Sai) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 6. 22WU0104105 (Seelamsetti  Manisha) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 7. 22WU0101029 (Behera Dipalika) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 8. 22WU0101149 (K  Rishi Raj) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 9. 22WU0104026 (Bijjam  Vishnu Vardhan Reddy) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [workflows.init_workflow] - 10. 22WU0101153 (Thouti  Vishwa Teja) - Score: 0.0000, Chunks: 0
+[2026-03-01 12:19:35] [INFO] [core.rag_evaluation.google_embedding_adapter] - Initialized GoogleGenerativeAIEmbeddingsAdapter with model: models/gemini-embedding-001
+[2026-03-01 12:19:36] [INFO] [core.embedding_cache] - Cache HIT: Using stored embedding
+[2026-03-01 12:19:36] [INFO] [workflows.init_workflow] - [SHORTLIST FILTER] Truncating candidate pool from 116 to top 30 for deep evaluation.
+[2026-03-01 12:19:38] [INFO] [core.github_vector_store] - Loading existing GitHub vector index
+[2026-03-01 12:19:42] [INFO] [app.services.pipeline_service] - [SAVING SCREENING RESULT] Persisting intelligence to database.
+INFO:     127.0.0.1:50218 - "POST /api/force-evaluate/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:60685 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56514 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51322 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64908 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50662 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50662 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64908 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/results HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64908 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50662 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:56367 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:56367 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:50662 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53357 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:53357 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63878 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55257 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SATHWIKTEC HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/SATHWIKTEC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/VARSHITHLP HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/DIPALIKA1904 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/DIPALIKA1904 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/MANITEJESWARREDDY162004 HTTP/1.1"
+ 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/MANITEJESWARREDDY162004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SYDMALI2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SYDMALI2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SAIAJITH030 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/TULASI1126 HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/TULASI1126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK        
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KRAIYAN991 HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK        
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SATHWIKTEC HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/SATHWIKTEC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/VARSHITHLP HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/DIPALIKA1904 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/DIPALIKA1904 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/SRSAKETH1901 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/MANITEJESWARREDDY162004 HTTP/1.1"
+ 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/MANITEJESWARREDDY162004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/SYDMALI2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/SYDMALI2004 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/TULASI1126 HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/TULASI1126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK  
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KRAIYAN991 HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:57367 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/results HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/results HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:50432 - "GET /api/rag/evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-evaluation-status/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/SATHWIKTEC HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/SATHWIKTEC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/ASHISHG2204 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/DIPALIKA1904 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/DIPALIKA1904 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/RISHITHA739 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/MANITEJESWARREDDY162004 HTTP/1.1"
+ 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/MANITEJESWARREDDY162004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SYDMALI2004 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SYDMALI2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/SAIAJITH030 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/TULASI1126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/TULASI1126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK  
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK  
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK        
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/VISHWATHOUTI247 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SATHWIKTEC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/SATHWIKTEC HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/ASHISHG2204 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/ASHISHG2204 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/NAGENDRA.GUPTHA777 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/KESAVIVEK03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/SARVESHSHETTY.WORK HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/VARSHITHLP HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/KONDURISAIMEGHANA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SRSAKETH1901 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/DIPALIKA1904 HTTP/1.1" 200 OK    
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/SRSAKETH1901 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/DIPALIKA1904 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/JAYANTHKHETHAVATH HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/RISHITHA739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/SANJAYBUKKA28 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/MANITEJESWARREDDY162004 HTTP/1.1"
+ 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/MANITEJESWARREDDY162004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KARTHIK.NAIDU1869 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/SYDMALI2004 HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/SYDMALI2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SAIAJITH030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/BHAVYASRI2126 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/BHAVANVITHAPROJECTS HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/TULASI1126 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/llm-metrics/VAMSHIDHARREDDY2004 HTTP/1.1" 200 OK   
+INFO:     127.0.0.1:61846 - "GET /api/rag/retrieval-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/llm-metrics/SHASHANKADITYAMITTAPALLI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/TULASI1126 HTTP/1.1" 200 OK      
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/retrieval-metrics/ADITHYAMUSKULA HTTP/1.1" 200 OK  
+INFO:     127.0.0.1:57737 - "GET /api/rag/retrieval-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK  
+INFO:     127.0.0.1:57367 - "GET /api/rag/llm-metrics/KRAIYAN991 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/MEDISHETTISAICHANDRA34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/JATEESHREDDY05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK 
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/NSOURABJHONSON6 HTTP/1.1" 200 OK       
+INFO:     127.0.0.1:57737 - "GET /api/rag/llm-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57367 - "GET /api/rag/retrieval-metrics/HEMANTHKUNCHAM8055 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64416 - "GET /api/rag/retrieval-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "GET /api/rag/llm-metrics/ALLURIDRUTHIVARMA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60160 - "GET /api/rag/llm-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK     
+INFO:     127.0.0.1:50432 - "GET /api/rag/retrieval-metrics/JAGRUTHIUPPUTOORI HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63540 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64264 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50716 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54302 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53856 - "GET /api/health HTTP/1.1" 200 OK

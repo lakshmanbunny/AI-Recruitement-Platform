@@ -99,36 +99,43 @@ def process_llm_job(db, job):
         if not screening_res:
             raise ValueError("No unified screening result found to audit.")
             
-        ai_evidence = json.loads(screening_res.ai_evidence_json) if screening_res.ai_evidence_json else []
-        
-        # 1. Rebuild Exact Resume Chunks String
-        resume_chunks_str = ""
-        resume_count = 0
-        chunks = [] # Raw text chunks for RAGAS
-        
-        for item in ai_evidence:
-            if item.get("source", "").startswith("Resume"):
-                resume_count += 1
-                r_id = f"R{resume_count}"
-                resume_chunks_str += f"[RESUME_CHUNK_ID: {r_id}]\nSection: {item.get('section', 'Unknown').capitalize()}\nContent: {item.get('snippet', '')}\n\n"
-                chunks.append(item.get('snippet', ''))
-                
-        if not resume_chunks_str:
-            resume_chunks_str = "No high-relevance resume evidence retrieved (Similarity < 0.45)."
-
-        # 2. Rebuild Exact GitHub Chunks String
-        gh_chunks_str = ""
-        gh_count = 0
-        for item in ai_evidence:
-            if item.get("source", "").startswith("GitHub"):
-                gh_count += 1
-                g_id = f"G{gh_count}"
-                gh_chunks_str += f"[GITHUB_CHUNK_ID: {g_id}]\nRepo: {item.get('repo', 'Unknown')}\nContent: {item.get('snippet', '')}\n\n"
-                chunks.append(item.get('snippet', ''))
-                
-        if not gh_chunks_str:
-            gh_chunks_str = "No high-relevance GitHub code evidence retrieved (Similarity < 0.45)."
+        if screening_res.ai_evidence_json and screening_res.ai_evidence_json != '[]':
+            ai_evidence = json.loads(screening_res.ai_evidence_json)
+            # 1. Rebuild Exact Resume Chunks String
+            resume_chunks_str = ""
+            resume_count = 0
+            chunks = [] # Raw text chunks for RAGAS
             
+            for item in ai_evidence:
+                if item.get("source", "").startswith("Resume"):
+                    resume_count += 1
+                    r_id = f"R{resume_count}"
+                    resume_chunks_str += f"[RESUME_CHUNK_ID: {r_id}]\nSection: {item.get('section', 'Unknown').capitalize()}\nContent: {item.get('snippet', '')}\n\n"
+                    chunks.append(item.get('snippet', ''))
+                    
+            if not resume_chunks_str:
+                resume_chunks_str = "No high-relevance resume evidence retrieved (Similarity < 0.45)."
+
+            # 2. Rebuild Exact GitHub Chunks String
+            gh_chunks_str = ""
+            gh_count = 0
+            for item in ai_evidence:
+                if item.get("source", "").startswith("GitHub"):
+                    gh_count += 1
+                    g_id = f"G{gh_count}"
+                    gh_chunks_str += f"[GITHUB_CHUNK_ID: {g_id}]\nRepo: {item.get('repo', 'Unknown')}\nContent: {item.get('snippet', '')}\n\n"
+                    chunks.append(item.get('snippet', ''))
+        else:
+            # FALLBACK: Re-run Stage 1 retrieval if screening evidence is empty
+            logger.info(f"[LLM AUDIT] No stored evidence found for {str_cand_id}. Falling back to live retrieval.")
+            rag_builder = ResumeRAGEvidenceBuilder()
+            evidence = rag_builder.build_evidence(str_cand_id, active_jd.jd_text)
+            chunks = [c.get("text", "") for c in evidence.get("raw_chunks", [])]
+            resume_count = len(chunks)
+            gh_count = 0 # GitHub fallback would require separate logic, usually omitted in pre-eval
+            resume_chunks_str = "\n".join(chunks)
+            gh_chunks_str = ""
+
         full_context_str = resume_chunks_str + gh_chunks_str
         
         from core.utils.context_hasher import compute_context_hash
@@ -161,10 +168,53 @@ def process_llm_job(db, job):
             answer=justification
         )
         
-        # Save results
+        # Save results for Unified Evaluation
         repository.save_rag_llm_metrics(db, job.candidate_id, metrics)
+        repository.update_screening_audit(db, job.candidate_id, active_jd.id, 'unified', metrics)
+
+        # 3. Audit Interview Readiness if it exists
+        if screening_res.interview_readiness_json:
+            try:
+                readiness_json = json.loads(screening_res.interview_readiness_json)
+                if readiness_json:
+                    readiness_str = (
+                        f"EXECUTIVE SUMMARY: {readiness_json.get('executive_summary', [])}\n"
+                        f"RISK FACTORS: {readiness_json.get('risk_factors', [])}\n"
+                        f"SKILL GAPS: {readiness_json.get('skill_gaps', [])}\n"
+                        f"RECOMMENDATION: {readiness_json.get('final_hiring_recommendation', '')}"
+                    )
+                    logger.info(f"[LLM AUDIT] Auditing Interview Readiness for candidate {job.candidate_id}")
+                    readiness_metrics = judge.evaluate(
+                        question=active_jd.jd_text,
+                        retrieved_chunks=chunks,
+                        answer=readiness_str
+                    )
+                    repository.update_screening_audit(db, job.candidate_id, active_jd.id, 'readiness', readiness_metrics)
+            except Exception as e:
+                logger.error(f"[LLM AUDIT] Failed to audit Readiness for {job.candidate_id}: {e}")
+
+        # 4. Audit Skeptic Analysis if it exists
+        if screening_res.skeptic_analysis_json:
+            try:
+                skeptic_json = json.loads(screening_res.skeptic_analysis_json)
+                if skeptic_json:
+                    skeptic_str = (
+                        f"WARNINGS: {skeptic_json.get('skeptic_recommendation', [])}\n"
+                        f"CONCERNS: {skeptic_json.get('major_concerns', [])}\n"
+                        f"RISK LEVEL: {skeptic_json.get('risk_level', '')}"
+                    )
+                    logger.info(f"[LLM AUDIT] Auditing Skeptic Analysis for candidate {job.candidate_id}")
+                    skeptic_metrics = judge.evaluate(
+                        question=active_jd.jd_text,
+                        retrieved_chunks=chunks,
+                        answer=skeptic_str
+                    )
+                    repository.update_screening_audit(db, job.candidate_id, active_jd.id, 'skeptic', skeptic_metrics)
+            except Exception as e:
+                logger.error(f"[LLM AUDIT] Failed to audit Skeptic for {job.candidate_id}: {e}")
+        
         repository.update_llm_job_status(db, job.id, "COMPLETED", metrics_json=json.dumps(metrics))
-        logger.info(f"[LLM AUDIT COMPLETED] Job {job.id} finished successfully.")
+        logger.info(f"[LLM AUDIT COMPLETED] Job {job.id} finished successfully for all agents.")
 
     except Exception as e:
         logger.error(f"[LLM AUDIT FAILED] Job {job.id} failed: {str(e)}")

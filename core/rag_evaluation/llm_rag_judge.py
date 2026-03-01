@@ -19,7 +19,7 @@ class EnterpriseLLMRAGJudge:
     4. Context Utilization
     """
     
-    def __init__(self, model_name: str = "gemini-2.5-flash-lite"):
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
         self.model_name = model_name
         # Using google.genai client for v1 API (Gemini 2.0 Flash)
         self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
@@ -57,7 +57,7 @@ ANSWER
             for attempt in range(max_retries):
                 try:
                     response = self.client.models.generate_content(
-                        model=self.model_name,
+                        model="gemini-2.5-pro",
                         contents=user_message,
                         config=types.GenerateContentConfig(
                             system_instruction=ENTERPRISE_RAG_JUDGE_SYSTEM_PROMPT,

@@ -59,8 +59,11 @@ const Results = () => {
         setSelectedCandidateId,
         submitHRDecision,
         runScreening,
+        runStage2,
+        isRunningStage2,
         forceEvaluate,
-        toggleRagOverride
+        toggleRagOverride,
+        isForceEvaluating
     } = useScreening();
 
     const [bgJobStatus, setBgJobStatus] = React.useState(null);
@@ -167,14 +170,38 @@ const Results = () => {
         }
     };
     if (!selectedCandidateId) {
-        return <CandidateGrid results={results} onSelectCandidate={setSelectedCandidateId} />;
+        return (
+            <div className="flex flex-col flex-1">
+                {/* Stage 2 Button — at the top of candidate grid */}
+                <div className="max-w-7xl w-full mx-auto px-6 pt-4">
+                    <div className="p-5 bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl border border-gray-700 flex items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-white text-sm font-black uppercase tracking-widest">Stage 2: GitHub Verification</h3>
+                            <p className="text-gray-400 text-xs font-medium">Analyze top 60 candidates' GitHub repos with AI-powered code review (Gemini 2.5 Pro)</p>
+                        </div>
+                        <button
+                            onClick={() => runStage2()}
+                            disabled={isRunningStage2}
+                            className="px-6 py-3 bg-white text-gray-900 text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
+                        >
+                            {isRunningStage2 ? (
+                                <><RotateCw size={14} className="animate-spin" /> Verifying...</>
+                            ) : (
+                                <><Github size={14} /> Run Stage 2</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+                <CandidateGrid results={results} onSelectCandidate={setSelectedCandidateId} />
+            </div>
+        );
     }
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden h-[calc(100vh-64px-60px)]">
             {/* Main Content - Full Width Detail View */}
             <main className="flex-1 bg-white overflow-y-auto">
-                {selectedCandidate && (
+                {selectedCandidate ? (
                     <div className="max-w-5xl mx-auto p-6 md:p-10 w-full">
                         <button
                             onClick={() => setSelectedCandidateId(null)}
@@ -219,19 +246,19 @@ const Results = () => {
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => forceEvaluate(selectedCandidateId, evaluationWeights)}
-                                        disabled={bgJobStatus?.status === 'RUNNING' || bgJobStatus?.status === 'PENDING' || isTriggeringLlmEval}
+                                        disabled={bgJobStatus?.status === 'RUNNING' || bgJobStatus?.status === 'PENDING' || isForceEvaluating || isTriggeringLlmEval}
                                         className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm transition-all flex items-center gap-2 ${selectedCandidate.evaluation_blocked
                                             ? 'bg-white text-red-600 border border-red-100 hover:bg-red-50'
                                             : 'bg-primary-blue text-white hover:bg-blue-700 shadow-blue-100'} disabled:opacity-50`}
                                     >
-                                        {isTriggeringLlmEval ? (
+                                        {(isForceEvaluating || isTriggeringLlmEval) ? (
                                             <RotateCw size={14} className="animate-spin" />
                                         ) : selectedCandidate.evaluation_blocked ? (
                                             <Zap size={14} />
                                         ) : (
                                             <CheckCircle size={14} />
                                         )}
-                                        {isTriggeringLlmEval ? 'Processing' : selectedCandidate.evaluation_blocked ? 'Force Run Agents' : 'Execute AI Audit'}
+                                        {isForceEvaluating ? 'Evaluating...' : isTriggeringLlmEval ? 'Processing' : selectedCandidate.evaluation_blocked ? 'Force Run Agents' : 'Execute AI Audit'}
                                     </button>
                                 </div>
                             </div>
@@ -464,179 +491,325 @@ const Results = () => {
                             <BulletList items={selectedCandidate.justification} variant="success" />
                         </CollapsibleSection>
 
-                        {
-                            (selectedCandidate.rag_quality || retrievalMetrics) && (
-                                <CollapsibleSection title="RAG Intelligence Audit" icon={Search} defaultOpen={true}>
-                                    <div className="flex flex-col gap-8">
-                                        {/* Deterministic Retrieval Metrics */}
-                                        {retrievalMetrics && (
-                                            <div className="flex flex-col gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="text-sm font-black uppercase tracking-wider text-slate-800">Retrieval Quality Gate</h4>
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${retrievalMetrics.rag_health_status === 'HEALTHY' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {retrievalMetrics.rag_health_status}
-                                                    </span>
-                                                </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                    {[
-                                                        { label: 'JD Coverage', value: retrievalMetrics.coverage, threshold: 0.70, icon: FileText },
-                                                        { label: 'Similarity', value: retrievalMetrics.similarity, threshold: 0.70, icon: CheckCircle },
-                                                        { label: 'Diversity', value: retrievalMetrics.diversity, threshold: 0.60, icon: Database },
-                                                        { label: 'Density', value: retrievalMetrics.density, threshold: 0.50, icon: Search }
-                                                    ].map((m, i) => {
-                                                        const val = m.value || 0;
-                                                        const passing = val >= m.threshold;
-                                                        return (
-                                                            <div key={i} className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${passing ? 'bg-blue-50/40 border-blue-100' : 'bg-red-50/40 border-red-200'}`}>
-                                                                <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                                                                    <m.icon size={12} />
-                                                                    {m.label}
-                                                                </div>
-                                                                <div className={`text-2xl font-black ${passing ? 'text-primary-blue' : 'text-red-600'}`}>
-                                                                    {(val * 100).toFixed(0)}%
-                                                                </div>
-                                                                <div className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                                                                    {passing
-                                                                        ? <span className="text-blue-500">✓ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
-                                                                        : <span className="text-red-400">✗ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        onClick={() => toggleRagOverride(selectedCandidateId, !selectedCandidate.rag_override)}
-                                                        className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${selectedCandidate.rag_override ? 'bg-orange-500 text-white border-orange-600' : 'bg-white text-gray-400 border-gray-200 hover:border-orange-300 hover:text-orange-500'}`}
-                                                    >
-                                                        {selectedCandidate.rag_override ? '✓ RAG Gate Overridden' : 'Override RAG Gate'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Separator if both metrics exist */}
-                                        {retrievalMetrics && <div className="border-t border-gray-100"></div>}
-
-                                        {/* Action Button to run LLM Eval if no metrics yet, or to rerun if wanted */}
-                                        {!llmMetrics && (!llmJobStatus || llmJobStatus.status === 'none' || llmJobStatus.status === 'FAILED') && (
-                                            <div className="flex flex-col items-center justify-center p-8 bg-indigo-50/50 rounded-2xl border border-indigo-100 gap-4">
-                                                <div className="flex flex-col items-center text-center max-w-lg gap-2">
-                                                    <h4 className="text-lg font-black text-indigo-900">Post-LLM Evaluation Audit</h4>
-                                                    <p className="text-sm text-indigo-700 font-medium">
-                                                        Run a deep-dive evaluation using Gemini to strictly judge the LLM's faithfulness and context utilization.
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={runLlmEvaluation}
-                                                    disabled={isTriggeringLlmEval || (retrievalMetrics && retrievalMetrics.rag_health_status !== 'HEALTHY' && !selectedCandidate.rag_override)}
-                                                    className="px-6 py-3 bg-primary-blue text-white font-black text-sm uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                                >
-                                                    <ShieldCheck size={18} />
-                                                    {isTriggeringLlmEval ? 'Triggering...' : 'Run Enterprise RAG Audit'}
-                                                </button>
-                                                {retrievalMetrics && retrievalMetrics.rag_health_status !== 'HEALTHY' && !selectedCandidate.rag_override && (
-                                                    <span className="text-[10px] font-bold text-red-500 uppercase">
-                                                        Cannot run Audit: Retrieval Gate Failed.
-                                                    </span>
-                                                )}
-                                                {llmJobStatus?.status === 'FAILED' && (
-                                                    <span className="text-[10px] font-bold text-red-500 uppercase mt-2">
-                                                        Previous Audit Failed: {llmJobStatus.error}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Polling State */}
-                                        {llmJobStatus && (llmJobStatus.status === 'PENDING' || llmJobStatus.status === 'RUNNING') && (
-                                            <div className="flex items-center gap-4 p-6 bg-blue-50 border border-blue-100 rounded-2xl">
-                                                <RotateCw className="animate-spin text-primary-blue mx-2" size={24} />
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-blue-900 uppercase">Running Intelligence Audit</span>
-                                                    <span className="text-xs font-medium text-blue-700">Evaluating faithfulness, relevance, and hallucinations via Gemini. Please wait...</span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Enterprise LLM RAG Audit Metric Cards */}
-                                        {llmMetrics && (
-                                            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                                <div className="flex items-center justify-between">
-                                                    <h4 className="text-sm font-black uppercase tracking-wider text-slate-800">Post-LLM Evaluation Metrics</h4>
-                                                    <span className="text-xs font-bold text-gray-400">Powered by Gemini 2.0 Flash</span>
-                                                </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                    {[
-                                                        { label: 'AI Precision', value: llmMetrics.precision, threshold: 0.70, icon: Search },
-                                                        { label: 'AI Recall', value: llmMetrics.recall, threshold: 0.70, icon: Database },
-                                                        { label: 'Faithfulness', value: llmMetrics.faithfulness, threshold: 0.80, icon: ShieldCheck },
-                                                        { label: 'Relevance', value: llmMetrics.answer_relevance, threshold: 0.70, icon: CheckCircle }
-                                                    ].map((m, i) => {
-                                                        const val = m.value || 0;
-                                                        const passing = val >= m.threshold;
-                                                        const warn = val >= m.threshold * 0.85;
-                                                        return (
-                                                            <div key={i} className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${passing ? 'bg-green-50/40 border-green-100' : warn ? 'bg-orange-50/40 border-orange-100' : 'bg-red-50/40 border-red-200'}`}>
-                                                                <div className="flex items-center gap-2 text-gray-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                                                                    <m.icon size={12} />
-                                                                    {m.label}
-                                                                </div>
-                                                                <div className={`text-2xl font-black ${passing ? 'text-emerald-600' : warn ? 'text-orange-500' : 'text-red-600'}`}>
-                                                                    {(val * 100).toFixed(0)}%
-                                                                </div>
-                                                                <div className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                                                                    {passing
-                                                                        ? <span className="text-emerald-500">✓ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
-                                                                        : <span className="text-red-400">✗ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                {/* Health Status Bar */}
-                                                <div className={`p-5 rounded-[1.5rem] border flex md:flex-row flex-col items-start md:items-center justify-between gap-4 mt-2 ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-green-50/50 border-green-100' :
-                                                    llmMetrics.rag_health_status === 'WARN' ? 'bg-orange-50/50 border-orange-100' : 'bg-red-50/50 border-red-100'
-                                                    }`}>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`p-3 rounded-xl ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-emerald-500 text-white' :
-                                                            llmMetrics.rag_health_status === 'WARN' ? 'bg-orange-500 text-white' : 'bg-red-600 text-white'
-                                                            }`}>
-                                                            <Terminal size={18} />
+                        {/* Resume Content Section */}
+                        {selectedCandidate.raw_resume_text && (
+                            <CollapsibleSection title="Resume Content" icon={FileText} defaultOpen={false}>
+                                <div className="flex flex-col gap-4">
+                                    {(() => {
+                                        try {
+                                            const parsed = JSON.parse(selectedCandidate.raw_resume_text);
+                                            return (
+                                                <>
+                                                    {parsed.document_title && (
+                                                        <div className="pb-3 border-b border-gray-100">
+                                                            <h4 className="text-lg font-black text-[#1A1A1A]">{parsed.document_title}</h4>
                                                         </div>
-                                                        <div className="flex flex-col gap-1">
+                                                    )}
+                                                    {parsed.sections?.map((section, idx) => (
+                                                        <div key={idx} className="flex flex-col gap-2">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Audit Output</span>
-                                                                <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-white text-emerald-600' :
-                                                                    llmMetrics.rag_health_status === 'WARN' ? 'bg-white text-orange-500' : 'bg-white text-red-600'
-                                                                    }`}>
-                                                                    {llmMetrics.rag_health_status}
+                                                                <span className="px-2 py-0.5 bg-blue-50 text-primary-blue text-[9px] font-black uppercase tracking-widest rounded">
+                                                                    {section.heading}
                                                                 </span>
                                                             </div>
-                                                            <div className="text-sm font-bold text-slate-800">
-                                                                Final LLM Judge Score: {((llmMetrics.overall_score || 0) * 100).toFixed(0)}%
+                                                            <div className="text-[13px] text-gray-700 leading-relaxed whitespace-pre-line pl-2 border-l-2 border-blue-100">
+                                                                {section.content}
                                                             </div>
                                                         </div>
+                                                    ))}
+                                                </>
+                                            );
+                                        } catch {
+                                            return (
+                                                <div className="text-[13px] text-gray-700 leading-relaxed whitespace-pre-line">
+                                                    {selectedCandidate.raw_resume_text}
+                                                </div>
+                                            );
+                                        }
+                                    })()}
+                                </div>
+                            </CollapsibleSection>
+                        )}
+
+                        {/* GitHub Evidence — only shows after Stage 2 */}
+                        {selectedCandidate.github_score > 0 && (
+                            <>
+                                {/* GitHub Repo Links */}
+                                {selectedCandidate.repos?.length > 0 && (
+                                    <CollapsibleSection title="GitHub Evidence Tracking" icon={Github} defaultOpen={true} count={selectedCandidate.repos.length}>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {selectedCandidate.repos.map((repo, idx) => (
+                                                <a key={idx} href={repo.url} target="_blank" rel="noopener noreferrer"
+                                                    className="p-4 border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-md transition-all group">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Github size={16} className="text-gray-400 group-hover:text-primary-blue transition-colors" />
+                                                        <span className="text-sm font-bold text-[#1A1A1A] group-hover:text-primary-blue transition-colors">{repo.name}</span>
                                                     </div>
-                                                    <div className="px-5 py-3 bg-white/60 rounded-xl text-xs font-medium italic text-slate-600 border border-black/5 shadow-sm max-w-sm">
-                                                        "{llmMetrics.explanation}"
+                                                    <p className="text-[11px] text-gray-500 leading-relaxed mb-3 line-clamp-2">{repo.description || 'No description'}</p>
+                                                    <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
+                                                        {repo.language && <span className="px-2 py-0.5 bg-blue-50 text-primary-blue rounded">{repo.language}</span>}
+                                                        {repo.stars > 0 && <span>⭐ {repo.stars}</span>}
+                                                        <ExternalLink size={10} className="ml-auto text-gray-300 group-hover:text-primary-blue" />
                                                     </div>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+
+                                {/* GitHub Rubric Scores */}
+                                {(selectedCandidate.github_rubric || (typeof selectedCandidate.github_features === 'object' && selectedCandidate.github_features?.rubric_scores)) && (() => {
+                                    const rubric = selectedCandidate.github_rubric || selectedCandidate.github_features?.rubric_scores || {};
+                                    const strengths = selectedCandidate.github_strengths || selectedCandidate.github_features?.strengths || [];
+                                    const weaknesses = selectedCandidate.github_weaknesses || selectedCandidate.github_features?.weaknesses || [];
+                                    const justification = selectedCandidate.github_justification || selectedCandidate.github_features?.github_justification || '';
+                                    return (
+                                        <CollapsibleSection title="GitHub Rubric & Analysis" icon={Code} defaultOpen={true}>
+                                            <div className="flex flex-col gap-6">
+                                                {/* Rubric Score Cards */}
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    {[
+                                                        { label: 'Code Quality', value: rubric.code_quality || 0, max: 25 },
+                                                        { label: 'JD Relevance', value: rubric.jd_relevance || 0, max: 25 },
+                                                        { label: 'Complexity', value: rubric.complexity || 0, max: 25 },
+                                                        { label: 'Best Practices', value: rubric.best_practices || 0, max: 25 },
+                                                    ].map((m, i) => {
+                                                        const pct = (m.value / m.max) * 100;
+                                                        const color = pct >= 70 ? 'text-green-600 bg-green-50 border-green-100' : pct >= 40 ? 'text-orange-600 bg-orange-50 border-orange-100' : 'text-red-600 bg-red-50 border-red-100';
+                                                        return (
+                                                            <div key={i} className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${color}`}>
+                                                                <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">{m.label}</div>
+                                                                <div className="text-2xl font-black">{m.value}/{m.max}</div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
 
-                                                <div className="flex justify-end mt-1">
-                                                    <button onClick={runLlmEvaluation} disabled={isTriggeringLlmEval} className="text-xs font-bold text-gray-400 hover:text-primary-blue uppercase tracking-widest transition-colors flex items-center gap-1">
-                                                        <RotateCw size={12} className={isTriggeringLlmEval ? 'animate-spin' : ''} />
-                                                        Re-run Audit
-                                                    </button>
+                                                {/* Justification */}
+                                                {justification && (
+                                                    <p className="text-[13px] text-gray-600 leading-relaxed italic border-l-2 border-gray-200 pl-3">{justification}</p>
+                                                )}
+
+                                                {/* Strengths */}
+                                                {strengths.length > 0 && (
+                                                    <div>
+                                                        <h5 className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">Strengths</h5>
+                                                        <BulletList items={strengths} variant="success" />
+                                                    </div>
+                                                )}
+
+                                                {/* Weaknesses */}
+                                                {weaknesses.length > 0 && (
+                                                    <div>
+                                                        <h5 className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2">Weaknesses</h5>
+                                                        <BulletList items={weaknesses} variant="warning" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CollapsibleSection>
+                                    );
+                                })()}
+
+                                {/* AI Code Transparency — Show actual code */}
+                                {selectedCandidate.code_evidence?.length > 0 && (
+                                    <CollapsibleSection title="AI Code Transparency" icon={Terminal} defaultOpen={false} count={selectedCandidate.code_evidence.length}>
+                                        <div className="flex flex-col gap-4">
+                                            {selectedCandidate.code_evidence.map((ev, idx) => (
+                                                <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
+                                                    <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                                                        <div className="flex items-center gap-2">
+                                                            <Github size={12} className="text-gray-400" />
+                                                            <span className="text-[11px] font-bold text-gray-700">{ev.repo_name}/{ev.file_path}</span>
+                                                            <span className="px-1.5 py-0.5 bg-blue-50 text-primary-blue text-[9px] font-bold rounded">{ev.language}</span>
+                                                        </div>
+                                                        <a href={ev.file_url} target="_blank" rel="noopener noreferrer"
+                                                            className="text-[10px] font-bold text-gray-400 hover:text-primary-blue flex items-center gap-1">
+                                                            View on GitHub <ExternalLink size={10} />
+                                                        </a>
+                                                    </div>
+                                                    <pre className="p-4 text-[11px] leading-relaxed text-gray-700 bg-gray-900 text-gray-300 overflow-x-auto max-h-[300px] overflow-y-auto font-mono">
+                                                        <code>{ev.code_snippet}</code>
+                                                    </pre>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleSection>
+                                )}
+                            </>
+                        )}
+
+                        {false && (selectedCandidate.rag_quality || retrievalMetrics) && (
+                            <CollapsibleSection title="RAG Intelligence Audit" icon={Search} defaultOpen={true}>
+                                <div className="flex flex-col gap-8">
+                                    {/* Deterministic Retrieval Metrics */}
+                                    {retrievalMetrics && (
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-sm font-black uppercase tracking-wider text-slate-800">Retrieval Quality Gate</h4>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${retrievalMetrics.rag_health_status === 'HEALTHY' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {retrievalMetrics.rag_health_status}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {[
+                                                    { label: 'JD Coverage', value: retrievalMetrics.coverage, threshold: 0.70, icon: FileText },
+                                                    { label: 'Similarity', value: retrievalMetrics.similarity, threshold: 0.70, icon: CheckCircle },
+                                                    { label: 'Diversity', value: retrievalMetrics.diversity, threshold: 0.60, icon: Database },
+                                                    { label: 'Density', value: retrievalMetrics.density, threshold: 0.50, icon: Search }
+                                                ].map((m, i) => {
+                                                    const val = m.value || 0;
+                                                    const passing = val >= m.threshold;
+                                                    return (
+                                                        <div key={i} className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${passing ? 'bg-blue-50/40 border-blue-100' : 'bg-red-50/40 border-red-200'}`}>
+                                                            <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+                                                                <m.icon size={12} />
+                                                                {m.label}
+                                                            </div>
+                                                            <div className={`text-2xl font-black ${passing ? 'text-primary-blue' : 'text-red-600'}`}>
+                                                                {(val * 100).toFixed(0)}%
+                                                            </div>
+                                                            <div className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                                                {passing
+                                                                    ? <span className="text-blue-500">✓ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
+                                                                    : <span className="text-red-400">✗ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={() => toggleRagOverride(selectedCandidateId, !selectedCandidate.rag_override)}
+                                                    className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${selectedCandidate.rag_override ? 'bg-orange-500 text-white border-orange-600' : 'bg-white text-gray-400 border-gray-200 hover:border-orange-300 hover:text-orange-500'}`}
+                                                >
+                                                    {selectedCandidate.rag_override ? '✓ RAG Gate Overridden' : 'Override RAG Gate'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Separator if both metrics exist */}
+                                    {retrievalMetrics && <div className="border-t border-gray-100"></div>}
+
+                                    {/* Action Button to run LLM Eval if no metrics yet, or to rerun if wanted */}
+                                    {!llmMetrics && (!llmJobStatus || llmJobStatus.status === 'none' || llmJobStatus.status === 'FAILED') && (
+                                        <div className="flex flex-col items-center justify-center p-8 bg-indigo-50/50 rounded-2xl border border-indigo-100 gap-4">
+                                            <div className="flex flex-col items-center text-center max-w-lg gap-2">
+                                                <h4 className="text-lg font-black text-indigo-900">Post-LLM Evaluation Audit</h4>
+                                                <p className="text-sm text-indigo-700 font-medium">
+                                                    Run a deep-dive evaluation using Gemini to strictly judge the LLM's faithfulness and context utilization.
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={runLlmEvaluation}
+                                                disabled={isTriggeringLlmEval || (retrievalMetrics && retrievalMetrics.rag_health_status !== 'HEALTHY' && !selectedCandidate.rag_override)}
+                                                className="px-6 py-3 bg-primary-blue text-white font-black text-sm uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                <ShieldCheck size={18} />
+                                                {isTriggeringLlmEval ? 'Triggering...' : 'Run Enterprise RAG Audit'}
+                                            </button>
+                                            {retrievalMetrics && retrievalMetrics.rag_health_status !== 'HEALTHY' && !selectedCandidate.rag_override && (
+                                                <span className="text-[10px] font-bold text-red-500 uppercase">
+                                                    Cannot run Audit: Retrieval Gate Failed.
+                                                </span>
+                                            )}
+                                            {llmJobStatus?.status === 'FAILED' && (
+                                                <span className="text-[10px] font-bold text-red-500 uppercase mt-2">
+                                                    Previous Audit Failed: {llmJobStatus.error}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Polling State */}
+                                    {llmJobStatus && (llmJobStatus.status === 'PENDING' || llmJobStatus.status === 'RUNNING') && (
+                                        <div className="flex items-center gap-4 p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+                                            <RotateCw className="animate-spin text-primary-blue mx-2" size={24} />
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-black text-blue-900 uppercase">Running Intelligence Audit</span>
+                                                <span className="text-xs font-medium text-blue-700">Evaluating faithfulness, relevance, and hallucinations via Gemini. Please wait...</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Enterprise LLM RAG Audit Metric Cards */}
+                                    {llmMetrics && (
+                                        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-sm font-black uppercase tracking-wider text-slate-800">Post-LLM Evaluation Metrics</h4>
+                                                <span className="text-xs font-bold text-gray-400">Powered by Gemini 2.5 Pro</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {[
+                                                    { label: 'Faithfulness', value: llmMetrics.faithfulness, threshold: 0.80, icon: ShieldCheck },
+                                                    { label: 'Relevance', value: llmMetrics.answer_relevance, threshold: 0.70, icon: CheckCircle },
+                                                    { label: 'Hallucination', value: llmMetrics.hallucination_score, threshold: 0.90, icon: ShieldAlert },
+                                                    { label: 'Utility', value: llmMetrics.context_utilization, threshold: 0.70, icon: Database }
+                                                ].map((m, i) => {
+                                                    const val = m.value || 0;
+                                                    const passing = val >= m.threshold;
+                                                    const warn = val >= m.threshold * 0.85;
+                                                    return (
+                                                        <div key={i} className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${passing ? 'bg-green-50/40 border-green-100' : warn ? 'bg-orange-50/40 border-orange-100' : 'bg-red-50/40 border-red-200'}`}>
+                                                            <div className="flex items-center gap-2 text-gray-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                                                                <m.icon size={12} />
+                                                                {m.label}
+                                                            </div>
+                                                            <div className={`text-2xl font-black ${passing ? 'text-emerald-600' : warn ? 'text-orange-500' : 'text-red-600'}`}>
+                                                                {(val * 100).toFixed(0)}%
+                                                            </div>
+                                                            <div className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                                                {passing
+                                                                    ? <span className="text-emerald-500">✓ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
+                                                                    : <span className="text-red-400">✗ Threshold: ≥{(m.threshold * 100).toFixed(0)}%</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Health Status Bar */}
+                                            <div className={`p-5 rounded-[1.5rem] border flex md:flex-row flex-col items-start md:items-center justify-between gap-4 mt-2 ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-green-50/50 border-green-100' :
+                                                llmMetrics.rag_health_status === 'WARN' ? 'bg-orange-50/50 border-orange-100' : 'bg-red-50/50 border-red-100'
+                                                }`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-xl ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-emerald-500 text-white' :
+                                                        llmMetrics.rag_health_status === 'WARN' ? 'bg-orange-500 text-white' : 'bg-red-600 text-white'
+                                                        }`}>
+                                                        <Terminal size={18} />
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Audit Output</span>
+                                                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${llmMetrics.rag_health_status === 'GOOD' ? 'bg-white text-emerald-600' :
+                                                                llmMetrics.rag_health_status === 'WARN' ? 'bg-white text-orange-500' : 'bg-white text-red-600'
+                                                                }`}>
+                                                                {llmMetrics.rag_health_status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm font-bold text-slate-800">
+                                                            Final LLM Judge Score: {((llmMetrics.overall_score || 0) * 100).toFixed(0)}%
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="px-5 py-3 bg-white/60 rounded-xl text-xs font-medium italic text-slate-600 border border-black/5 shadow-sm max-w-sm">
+                                                    "{llmMetrics.explanation}"
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </CollapsibleSection>
-                            )
+
+                                            <div className="flex justify-end mt-1">
+                                                <button onClick={runLlmEvaluation} disabled={isTriggeringLlmEval} className="text-xs font-bold text-gray-400 hover:text-primary-blue uppercase tracking-widest transition-colors flex items-center gap-1">
+                                                    <RotateCw size={12} className={isTriggeringLlmEval ? 'animate-spin' : ''} />
+                                                    Re-run Audit
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </CollapsibleSection>
+                        )
                         }
 
                         {
@@ -681,6 +854,31 @@ const Results = () => {
                                             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Executive Summary Findings</h4>
                                             <BulletList items={selectedCandidate.interview_readiness.executive_summary} variant="success" />
                                         </div>
+
+                                        {/* Audit Metrics for Readiness */}
+                                        {selectedCandidate.interview_readiness.judge_audit && (
+                                            <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Readiness Agent Audit</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 italic">Faithfulness & Grounding</span>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-3">
+                                                    {[
+                                                        { label: 'Faith', value: selectedCandidate.interview_readiness.judge_audit.faithfulness },
+                                                        { label: 'Rel', value: selectedCandidate.interview_readiness.judge_audit.relevance },
+                                                        { label: 'Hallu', value: selectedCandidate.interview_readiness.judge_audit.hallucination },
+                                                        { label: 'Util', value: selectedCandidate.interview_readiness.judge_audit.utility }
+                                                    ].map((m, i) => (
+                                                        <div key={i} className="flex flex-col items-center p-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                                            <span className="text-[8px] font-black text-slate-400 uppercase">{m.label}</span>
+                                                            <span className={`text-xs font-black ${m.value >= 0.8 ? 'text-emerald-600' : 'text-slate-600'}`}>
+                                                                {(m.value * 100).toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleSection>
                             )
@@ -717,6 +915,31 @@ const Results = () => {
                                             <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Skeptic Warnings</h4>
                                             <BulletList items={selectedCandidate.skeptic_analysis.skeptic_recommendation} variant="danger" />
                                         </div>
+
+                                        {/* Audit Metrics for Skeptic */}
+                                        {selectedCandidate.skeptic_analysis.judge_audit && (
+                                            <div className="flex flex-col gap-3 p-4 bg-orange-50/30 rounded-2xl border border-orange-100">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Skeptic Agent Audit</span>
+                                                    <span className="text-[9px] font-bold text-orange-400 italic">Faithfulness & Grounding</span>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-3">
+                                                    {[
+                                                        { label: 'Faith', value: selectedCandidate.skeptic_analysis.judge_audit.faithfulness },
+                                                        { label: 'Rel', value: selectedCandidate.skeptic_analysis.judge_audit.relevance },
+                                                        { label: 'Hallu', value: selectedCandidate.skeptic_analysis.judge_audit.hallucination },
+                                                        { label: 'Util', value: selectedCandidate.skeptic_analysis.judge_audit.utility }
+                                                    ].map((m, i) => (
+                                                        <div key={i} className="flex flex-col items-center p-2 bg-white rounded-xl border border-orange-100 shadow-sm">
+                                                            <span className="text-[8px] font-black text-orange-400 uppercase">{m.label}</span>
+                                                            <span className={`text-xs font-black ${m.value >= 0.8 ? 'text-orange-600' : 'text-slate-600'}`}>
+                                                                {(m.value * 100).toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleSection>
                             )
@@ -819,6 +1042,12 @@ const Results = () => {
                             )
                         }
                     </div >
+                ) : (
+                    <div className="max-w-5xl mx-auto p-6 md:p-10 w-full flex flex-col items-center justify-center gap-4 h-full">
+                        <RotateCw size={24} className="animate-spin text-gray-300" />
+                        <p className="text-sm text-gray-400 font-bold">Loading candidate data...</p>
+                        <button onClick={() => setSelectedCandidateId(null)} className="text-xs font-bold text-primary-blue hover:underline mt-2">← Back to Pipeline Grid</button>
+                    </div>
                 )}
             </main >
         </div >

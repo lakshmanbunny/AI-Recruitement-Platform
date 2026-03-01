@@ -111,10 +111,10 @@ const CandidateRow = ({ candidate, evalData, onSelect }) => {
                     <div className="animate-pulse flex gap-1 pb-2"><div className="w-8 h-1 bg-gray-200 rounded-full" /><div className="w-8 h-1 bg-gray-200 rounded-full" /><div className="w-8 h-1 bg-gray-200 rounded-full" /><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
                 ) : llmMetrics ? (
                     <div className="flex gap-1 pb-2 pt-1 mt-1">
-                        <MiniMetric label="Precision" value={llmMetrics.precision} threshold={0.70} />
-                        <MiniMetric label="Recall" value={llmMetrics.recall} threshold={0.70} />
                         <MiniMetric label="Faithfulness" value={llmMetrics.faithfulness} threshold={0.80} />
                         <MiniMetric label="Relevance" value={llmMetrics.answer_relevance} threshold={0.70} />
+                        <MiniMetric label="Hallucination" value={llmMetrics.hallucination_score} threshold={0.90} />
+                        <MiniMetric label="Utility" value={llmMetrics.context_utilization} threshold={0.70} />
                     </div>
                 ) : (
                     <span className="text-xs text-gray-400 font-medium italic">Pending Audit</span>

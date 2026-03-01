@@ -78,6 +78,17 @@ async def run_screening_stream(req: ScreeningRequest = Body(default=None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Streaming Pipeline failed: {str(e)}")
 
+@router.post("/run-stage-2-stream")
+async def run_stage_2_stream():
+    from fastapi.responses import StreamingResponse
+    try:
+        return StreamingResponse(
+            pipeline_service.run_stage_2_stream(),
+            media_type="application/x-ndjson"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Stage 2 Pipeline failed: {str(e)}")
+
 @router.post("/hr-decision")
 async def submit_hr_decision(request: HRDecisionRequest):
     try:

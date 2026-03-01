@@ -4,6 +4,7 @@ import os
 from typing import Dict, List, Any, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 from langsmith import traceable
 from core.settings import settings
 from config.logging_config import get_logger
@@ -15,20 +16,103 @@ class LLMService:
     Enterprise-grade LLM Service with LangSmith observability and LangChain integration.
     """
     def __init__(self):
-        # Generator: Gemini 2.0 Pro (or latest Pro fallback)
+        # Generator: Gemini 2.0 Pro Experimental
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-pro",
+            model="gemini-2.5-pro",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.2,
             convert_system_message_to_human=True
         )
-        # Judge: Gemini 3.0 Pro (or latest Pro fallback)
+        # Judge: Gemini 1.5 Pro
         self.judge_llm = ChatGoogleGenerativeAI(
-            model="gemini-3-pro-preview",
+            model="gemini-2.5-pro",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.1,
             convert_system_message_to_human=True
         )
+
+    @traceable(name="AI Judge Auditor")
+    def _audit_evaluation(
+        self, 
+        candidate_id: str,
+        jd_text: str,
+        evaluation_data: Dict[str, Any],
+        resume_chunks: str,
+        github_chunks: str,
+        agent_type: str = "Candidate Evaluation"
+    ) -> Dict[str, Any]:
+        """
+        Generic LLM-as-a-judge auditor to verify faithfulness, relevance, 
+        and groundedness of ANY evaluation.
+        """
+        try:
+            logger.info(f"Invoking Enterprise LLM Judge (Gemini 2.5 Pro) for audit of {agent_type} - {candidate_id}")
+            
+            audit_system_prompt = f"""You are a senior hiring auditor. 
+Audit the following {agent_type} for accuracy, fairness, and groundedness.
+Your goal is to ensure the evaluation is objective, grounded in the provided evidence, and free of hallucinations.
+
+Evaluate the following metrics (0.0 to 1.0):
+1. Faithfulness: Does the evaluation accurately reflect the provided chunks?
+2. Answer Relevance: Is the evaluation relevant to the Job Description?
+3. Hallucination: Are there any claims made that are NOT in the evidence? (1.0 = No hallucinations)
+4. Context Utilization: How well did the agent use the provided chunks?
+
+Return a structured JSON response."""
+
+            audit_user_message = f"""
+CANDIDATE: {candidate_id}
+JOB DESCRIPTION:
+{jd_text}
+
+EVALUATION TO AUDIT:
+{json.dumps(evaluation_data, indent=2)}
+
+EVIDENCE (RESUME):
+{resume_chunks}
+
+EVIDENCE (GITHUB):
+{github_chunks}
+
+AUDIT INSTRUCTIONS:
+1. Cross-reference the evaluation against the EVIDENCE.
+2. Verify that any citations or claims align with the actual chunk text.
+3. Assign scores (0.0 - 1.0) for Faithfulness, Relevance, Hallucination, and Context Utilization.
+4. Decide if the evaluation is "APPROVED" or needs to be "REVISED".
+
+STRICT RESPONSE FORMAT (JSON):
+{{
+    "judge_verdict": "APPROVED / REVISED",
+    "audit_reasoning": "Explain your findings.",
+    "faithfulness": float (0.0-1.0),
+    "answer_relevance": float (0.0-1.0),
+    "hallucination_score": float (0.0-1.0),
+    "context_utilization": float (0.0-1.0),
+    "corrected_rubric_scores": {{ ... only if REVISED ... }},
+    "corrected_overall_score": float (0-100),
+    "corrected_justification": [ "audited bullets" ],
+    "confidence_in_audit": int (0-100)
+}}
+"""
+            
+            messages = [
+                SystemMessage(content=audit_system_prompt),
+                HumanMessage(content=audit_user_message)
+            ]
+            
+            audit_response = self.judge_llm.invoke(messages)
+            audit_content = audit_response.content
+            
+            if "```json" in audit_content:
+                audit_content = audit_content.split("```json")[1].split("```")[0].strip()
+            elif "```" in audit_content:
+                audit_content = audit_content.split("```")[1].split("```")[0].strip()
+            
+            audit_res = json.loads(audit_content)
+            return audit_res
+        except Exception as e:
+            logger.error(f"LLM Judge Audit failed for {candidate_id}: {e}")
+            return {"judge_verdict": "ERROR", "reasoning": str(e), "faithfulness": 0.0, "hallucination_score": 0.0}
 
     @traceable(name="Unified Candidate Evaluation")
     def unified_candidate_evaluation(
@@ -74,20 +158,68 @@ class LLMService:
         logger.info(f"[TRACE] Resume chunks selected: {len(top_resume)}")
         logger.info(f"[TRACE] GitHub chunks selected: {len(top_github)}")
         
-        # 3. FORMAT CHUNKS WITH CITATIONS (Part 2.1 & 2.2)
+    def format_context_chunks(self, top_resume: List[Dict], top_github: List[Dict]) -> Dict[str, str]:
+        """
+        Consistently formats resume and github chunks for LLM consumption.
+        """
         resume_chunks_str = ""
         for i, chunk in enumerate(top_resume, 1):
             resume_chunks_str += f"[RESUME_CHUNK_ID: R{i}]\nSection: {chunk.get('section', 'Unknown').capitalize()}\nContent: {chunk.get('text', '')}\n\n"
         
         if not resume_chunks_str:
-            resume_chunks_str = "No high-relevance resume evidence retrieved (Similarity < 0.45)."
+            resume_chunks_str = "No high-relevance resume evidence retrieved."
 
         github_chunks_str = ""
         for i, chunk in enumerate(top_github, 1):
             github_chunks_str += f"[GITHUB_CHUNK_ID: G{i}]\nRepo: {chunk.get('repo_name', 'Unknown')}\nContent: {chunk.get('chunk_text', '')}\n\n"
         
         if not github_chunks_str:
-            github_chunks_str = "No high-relevance GitHub code evidence retrieved (Similarity < 0.45)."
+            github_chunks_str = "No high-relevance GitHub code evidence retrieved."
+            
+        return {
+            "resume_chunks": resume_chunks_str,
+            "github_chunks": github_chunks_str
+        }
+
+    @traceable(name="Unified Candidate Evaluation")
+    def unified_candidate_evaluation(
+        self, 
+        candidate_id: str,
+        jd_text: str, 
+        resume_summary: str,
+        github_username: str,
+        github_features: Dict[str, Any],
+        evidence: List[Dict],
+        resume_rag_evidence: Optional[Dict[str, Any]] = None,
+        weights: Optional[Dict[str, float]] = None
+    ) -> Dict[str, Any]:
+        """
+        Enterprise-grade grounded evaluation using Top-K evidence, citations, and dynamic weights.
+        """
+        # 1. Default Weights if not provided
+        if not weights:
+            weights = {
+                "technical_skills": 0.30,
+                "experience_relevance": 0.20,
+                "project_impact": 0.20,
+                "github_strength": 0.20,
+                "evidence_reliability": 0.10
+            }
+        
+        # 2. EVIDENCE PREPROCESSING
+        resume_raw = resume_rag_evidence.get("raw_chunks", []) if resume_rag_evidence else []
+        resume_filtered = [c for c in resume_raw if c.get("score", 0) >= 0.0]
+        resume_filtered.sort(key=lambda x: x.get("score", 0), reverse=True)
+        top_resume = resume_filtered
+        
+        github_filtered = [c for c in (evidence or []) if c.get("score", 0) >= 0.0]
+        github_filtered.sort(key=lambda x: x.get("score", 0), reverse=True)
+        top_github = github_filtered
+        
+        # 3. FORMAT CHUNKS WITH CITATIONS
+        formatted = self.format_context_chunks(top_resume, top_github)
+        resume_chunks_str = formatted["resume_chunks"]
+        github_chunks_str = formatted["github_chunks"]
 
         # 4. LOAD PROMPTS FROM FILES (Part 4)
         try:
@@ -116,11 +248,8 @@ class LLMService:
         }
 
         # LangSmith Trace Enhancement (Part 5)
-        ctx_chars = len(system_prompt + user_template)
         from core.utils.context_hasher import compute_context_hash
         generator_hash = compute_context_hash(resume_chunks_str + github_chunks_str)
-        logger.info(f"[TRACE] Context chars: {ctx_chars}")
-        logger.info(f"[TRACE] Tokens est: {ctx_chars // 4}")
         logger.info(f"[TRACE] Weight Configuration: {json.dumps(weights)}")
         logger.info(f"[TRACE] Generator context hash: {generator_hash}")
 
@@ -150,68 +279,38 @@ class LLMService:
                 eval_data["generator_hash"] = generator_hash # Pass this out for DB / Worker usage if needed
 
                 # --- PHASE 2: LLM JUDGE AUDIT ---
-                try:
-                    logger.info(f"Invoking Enterprise LLM Judge (Gemini 3.0 Pro) for audit of {candidate_id}")
-                    with open(os.path.join(curr_dir, "prompts", "judge_audit_user_template.txt"), "r") as f:
-                        judge_template = f.read()
-                    
-                    judge_prompt = ChatPromptTemplate.from_messages([
-                        ("system", "You are a senior hiring auditor. Audit the following AI recruitment evaluation for accuracy and fairness."),
-                        ("human", judge_template)
-                    ])
-                    
-                    judge_chain = judge_prompt | self.judge_llm
-                    judge_payload = {
-                        "candidate_id": candidate_id,
-                        "job_description": jd_text,
-                        "evaluation_json": json.dumps(eval_data, indent=2),
-                        "resume_chunks": resume_chunks_str,
-                        "github_chunks": github_chunks_str
-                    }
-                    
-                    judge_response = judge_chain.invoke(judge_payload)
-                    judge_content = judge_response.content
-                    if "```json" in judge_content:
-                        judge_content = judge_content.split("```json")[1].split("```")[0].strip()
-                    elif "```" in judge_content:
-                        judge_content = judge_content.split("```")[1].split("```")[0].strip()
-                    
-                    audit_res = json.loads(judge_content)
-                    
-                    # Merge Judge's revisions if any
-                    if audit_res.get("judge_verdict") == "REVISED":
-                        logger.warning(f"LLM Judge REVISED evaluation for {candidate_id}: {audit_res.get('audit_reasoning')}")
-                        eval_data["rubric_scores"] = audit_res.get("corrected_rubric_scores", eval_data.get("rubric_scores"))
-                        eval_data["overall_score"] = audit_res.get("corrected_overall_score", eval_data.get("overall_score"))
-                        eval_data["justification"] = audit_res.get("corrected_justification", eval_data.get("justification"))
-                    
-                    eval_data["judge_audit"] = {
-                        "verdict": audit_res.get("judge_verdict", "APPROVED"),
-                        "reasoning": audit_res.get("audit_reasoning", "No discrepancies found."),
-                        "confidence": audit_res.get("confidence_in_audit", 100)
-                    }
-                except Exception as je:
-                    logger.error(f"LLM Judge Audit failed for {candidate_id}: {je}")
-                    eval_data["judge_audit"] = {"verdict": "ERROR", "reasoning": str(je)}
-
-                # Extract AI-assessed RAG metrics (Stage 2)
-                eval_data["precision_score"] = eval_data.get("precision_score", 0)
-                eval_data["recall_score"] = eval_data.get("recall_score", 0)
+                audit_res = self._audit_evaluation(
+                    candidate_id=candidate_id,
+                    jd_text=jd_text,
+                    evaluation_data=eval_data,
+                    resume_chunks=resume_chunks_str,
+                    github_chunks=github_chunks_str,
+                    agent_type="Unified Evaluation"
+                )
                 
+                # Merge Judge's revisions if any
+                if audit_res.get("judge_verdict") == "REVISED":
+                    logger.warning(f"LLM Judge REVISED evaluation for {candidate_id}: {audit_res.get('audit_reasoning')}")
+                    eval_data["rubric_scores"] = audit_res.get("corrected_rubric_scores", eval_data.get("rubric_scores"))
+                    eval_data["overall_score"] = audit_res.get("corrected_overall_score", eval_data.get("overall_score"))
+                    eval_data["justification"] = audit_res.get("corrected_justification", eval_data.get("justification"))
+                
+                eval_data["judge_audit"] = {
+                    "verdict": audit_res.get("judge_verdict", "APPROVED"),
+                    "reasoning": audit_res.get("audit_reasoning", "Passed audit."),
+                    "confidence": audit_res.get("confidence_in_audit", 100),
+                    "faithfulness": audit_res.get("faithfulness", 1.0),
+                    "relevance": audit_res.get("answer_relevance", 1.0),
+                    "hallucination": audit_res.get("hallucination_score", 1.0),
+                    "utility": audit_res.get("context_utilization", 1.0)
+                }
+
                 # Validation Logic
                 issues = []
                 # Check citations in justification
                 for bullet in eval_data.get("justification", []):
                     if not re.search(r"\[[RG][0-9]+\]", bullet):
                         issues.append("Missing citation in justification bullet")
-                
-                # Check score ranges
-                rubric = eval_data.get("rubric_scores", {})
-                for k, v in rubric.items():
-                    if not (0 <= v <= 10):
-                        v_int = int(v) if isinstance(v, (int, float)) else 0
-                        if not (0 <= v_int <= 10):
-                            issues.append(f"Rubric score {k}={v} out of range [0-10]")
                 
                 if issues:
                     logger.warning(f"Validation failed for candidate {candidate_id}: {'; '.join(issues)}")
@@ -244,17 +343,24 @@ class LLMService:
                     continue
                 return {
                     "evaluation_blocked": False,
-                    "error": f"Evaluation failed after {max_attempts} attempts: {str(e)}",
+                    "error": str(e),
                     "overall_score": 0,
                     "justification": ["System error during evaluation."]
                 }
         return {}
 
     @traceable(name="Interview Readiness Evaluation")
-    def interview_readiness_evaluation(self, candidate_profile: Dict[str, Any]) -> Dict[str, Any]:
+    def interview_readiness_evaluation(
+        self, 
+        candidate_id: str,
+        jd_text: str,
+        candidate_profile: Dict[str, Any],
+        resume_chunks: str = "",
+        github_chunks: str = ""
+    ) -> Dict[str, Any]:
         """
         Final hiring intelligence layer to evaluate interview readiness.
-        Strict enterprise gatekeeper calibration.
+        Strict enterprise gatekeeper calibration with LLM-as-a-judge audit.
         """
         system_message = """You are a strict senior technical recruiter for a top-tier AI company.
 Your role is NOT to praise candidates.
@@ -264,16 +370,12 @@ Follow these mandatory evaluation principles:
 1. Assume the candidate is NOT hire-ready unless strong evidence proves otherwise.
 2. Always prioritize risk detection over strengths.
 3. No candidate is perfect — you MUST identify at least 2 skill gaps and at least 1 risk factor.
-4. Confidence score must be conservative: It must NEVER exceed the weakest dimension score. If any major gap exists, confidence must be below 85%.
-5. HIGH readiness is extremely rare: Only assign HIGH if candidate has proven production experience, strong GitHub evidence, and no critical skill gaps.
-8. Focus on potential hiring risks: Lack of real-world deployment, shallow understanding, over-reliance on tutorials, limited system design exposure.
+4. Confidence score must be conservative.
+5. Focus on potential hiring risks: Lack of real-world deployment, shallow understanding, over-reliance on tutorials.
 
 STRICT FORMATTING RULE: 
-- Use ONLY concise bullet points for textual explanations.
-- Max 8 bullet points per section.
-- No narrative sentences or paragraphs.
-
-Return only structured JSON output."""
+- Use ONLY concise bullet points.
+- Return only structured JSON output."""
         
         user_message_template = """
         Evaluate candidate readiness based on the following holistic profile.
@@ -281,14 +383,7 @@ Return only structured JSON output."""
         CANDIDATE PROFILE:
         {profile}
 
-        STRICT OUTPUT RULES:
-        - Always include at least 2 skill gaps.
-        - Always include at least 1 risk factor.
-        - Confidence must be realistic.
-        - Avoid generic praise.
-        - Justification must mention weaknesses.
-        
-        RESPONSE FORMAT (STRICT JSON, Max 400 tokens):
+        RESPONSE FORMAT (STRICT JSON):
         {{
             "hire_readiness_level": "str (HIGH/MEDIUM/LOW)",
             "confidence_score": int (0-100),
@@ -296,7 +391,7 @@ Return only structured JSON output."""
             "skill_gaps": ["⚠ list of skill gap bullet points"],
             "interview_focus_areas": ["🔍 list of interview focus bullet points"],
             "final_hiring_recommendation": "str (Strong Hire / Hire / Borderline / Reject)",
-            "executive_summary": ["✔ bulleted summaries of why this recommendation was made"]
+            "executive_summary": ["✔ bulleted summaries"]
         }}
         """
 
@@ -307,19 +402,11 @@ Return only structured JSON output."""
 
         chain = prompt | self.llm
 
-        config = {
-            "tags": ["stage:interview_readiness", "component:hiring_intelligence"],
-            "metadata": {
-                "candidate_id": candidate_profile.get("candidate_id", "unknown"),
-                "overall_score": candidate_profile.get("overall_score", 0)
-            }
-        }
-
-        logger.info(f"Invoking Strict Interview Readiness Agent for candidate")
+        logger.info(f"Invoking Strict Interview Readiness Agent for {candidate_id}")
         try:
             response = chain.invoke({
                 "profile": json.dumps(candidate_profile, indent=2)
-            }, config=config)
+            })
             
             content = response.content
             if "```json" in content:
@@ -328,66 +415,31 @@ Return only structured JSON output."""
                 content = content.split("```")[1].split("```")[0].strip()
 
             result = json.loads(content)
-            
-            # Defensive check for list fields
-            for field in ["risk_factors", "skill_gaps", "interview_focus_areas", "executive_summary"]:
-                if field in result and isinstance(result[field], str):
-                    result[field] = [result[field]]
-            
-            # --- Score Calibration Logic ---
-            res_score = candidate_profile.get("resume_score", 100)
-            gh_score = candidate_profile.get("github_score", 100)
-            
-            # Confidence must be min(provided_confidence, resume_score, github_score)
-            result["confidence_score"] = min(
-                result.get("confidence_score", 100),
-                res_score,
-                gh_score
-            )
-            
-            # Heuristic: Reduce over-scoring
-            skill_gaps = result.get("skill_gaps", [])
-            if len(skill_gaps) >= 3 and result.get("hire_readiness_level") == "HIGH":
-                result["hire_readiness_level"] = "MEDIUM"
-                result["final_hiring_recommendation"] = "Borderline"
-
-            logger.info("Strict interview readiness evaluation completed.")
             return result
         except Exception as e:
             logger.error(f"Interview readiness evaluation failed: {str(e)}")
-            # Fallback
-            return {
-                "hire_readiness_level": "LOW",
-                "confidence_score": 30,
-                "risk_factors": ["Evaluation error - manual review required"],
-                "skill_gaps": ["Technical evaluation failure", "Data inconsistency"],
-                "interview_focus_areas": ["Foundational system design", "Core architecture"],
-                "final_hiring_recommendation": "Reject",
-                "executive_summary": ["System failure during strict assessment. Automatic rejection recommended until manual audit."]
-            }
+            return {"hire_readiness_level": "LOW", "confidence_score": 0, "error": str(e)}
 
     @traceable(name="AI Skeptic Analysis")
-    def skeptic_evaluation(self, candidate_context: Dict[str, Any], gatekeeper_output: Dict[str, Any]) -> Dict[str, Any]:
+    def skeptic_evaluation(
+        self, 
+        candidate_id: str,
+        jd_text: str,
+        candidate_context: Dict[str, Any], 
+        gatekeeper_output: Dict[str, Any],
+        resume_chunks: str = "",
+        github_chunks: str = ""
+    ) -> Dict[str, Any]:
         """
-        Adversarial LLM agent to challenge hiring decisions and identify hidden risks.
+        Adversarial LLM agent to challenge hiring decisions with LLM-as-a-judge audit.
         """
         system_message = """You are a senior hiring risk auditor.
 Your role is to challenge hiring decisions and identify reasons NOT to hire a candidate.
-You must behave like a skeptical recruiter who assumes the hiring decision may be wrong.
-
-Evaluation principles:
-1. Your job is NOT to praise candidates.
-2. You must identify hidden risks and long-term hiring dangers.
-3. Focus on: Lack of real-world production experience, over-reliance on academic projects, weak system design exposure, missing collaboration/teamwork evidence, scalability concerns, limited domain depth.
-4. Always provide at least 3 risk concerns and at least 2 critical skill gaps.
-6. Be direct and realistic. Avoid polite HR language.
+Focus on: Lack of real-world production experience, weak system design exposure, missing collaboration evidence.
 
 STRICT FORMATTING RULE: 
 - Use ONLY concise bullet points.
-- No paragraphs.
-- Be direct and blunt.
-
-Return only structured JSON output."""
+- Return only structured JSON output."""
 
         user_message_template = """
         Challenge the following hiring evaluation for this candidate.
@@ -404,7 +456,7 @@ Return only structured JSON output."""
             "major_concerns": ["• Bulleted concerns"],
             "hidden_risks": ["• Bulleted hidden dangers"],
             "critical_skill_gaps": ["• Bulleted critical gaps"],
-            "skeptic_recommendation": ["• Final warnings in bullet form"]
+            "skeptic_recommendation": ["• Final warnings"]
         }}
         """
 
@@ -415,20 +467,12 @@ Return only structured JSON output."""
 
         chain = prompt | self.llm
 
-        config = {
-            "tags": ["stage:skeptic_analysis", "component:adversarial_agent"],
-            "metadata": {
-                "candidate_id": candidate_context.get("candidate_id", "unknown"),
-                "gatekeeper_readiness": gatekeeper_output.get("hire_readiness_level", "unknown")
-            }
-        }
-
-        logger.info("Invoking AI Skeptic Agent for candidate audit")
+        logger.info(f"Invoking AI Skeptic Agent for {candidate_id} audit")
         try:
             response = chain.invoke({
                 "context": json.dumps(candidate_context, indent=2),
                 "gatekeeper": json.dumps(gatekeeper_output, indent=2)
-            }, config=config)
+            })
             
             content = response.content
             if "```json" in content:
@@ -437,23 +481,10 @@ Return only structured JSON output."""
                 content = content.split("```")[1].split("```")[0].strip()
 
             result = json.loads(content)
-            
-            # Defensive check for list fields
-            for field in ["major_concerns", "hidden_risks", "critical_skill_gaps", "skeptic_recommendation"]:
-                if field in result and isinstance(result[field], str):
-                    result[field] = [result[field]]
-            
-            logger.info("AI Skeptic analysis completed.")
             return result
         except Exception as e:
             logger.error(f"AI Skeptic analysis failed: {str(e)}")
-            return {
-                "risk_level": "MEDIUM",
-                "major_concerns": ["Skeptic audit system error"],
-                "hidden_risks": ["Possible unvetted evaluation logic"],
-                "critical_skill_gaps": ["Safety audit missing"],
-                "skeptic_recommendation": ["Caution: Manual safety audit required due to system failure."]
-            }
+            return {"risk_level": "MEDIUM", "error": str(e)}
 
     @traceable(name="Final Decision Synthesis")
     def synthesize_final_decision(

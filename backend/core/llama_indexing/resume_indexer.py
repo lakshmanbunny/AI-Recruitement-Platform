@@ -104,3 +104,14 @@ class ResumeLlamaIndexer:
                 raise ValueError("Index not built or loaded.")
         
         return self.index.as_retriever(similarity_top_k=similarity_top_k)
+
+    def is_llama_index_ready(self) -> bool:
+        """
+        Returns True if the persisted LlamaIndex exists on disk and can be loaded.
+        Called by pipeline_service to decide whether to bypass the full rebuild.
+        """
+        if not os.path.exists(self.persist_dir):
+            return False
+        # Check for the docstore JSON which is always written by LlamaIndex persist()
+        docstore_path = os.path.join(self.persist_dir, "docstore.json")
+        return os.path.exists(docstore_path)
