@@ -57,6 +57,8 @@ class CandidateEvaluation(BaseModel):
     final_synthesized_decision: Optional[FinalSynthesizedDecision] = None
     hr_decision: Optional[Dict[str, Any]] = None
     ai_evidence: List[Dict[str, Any]] = []
+    rag_quality: Optional[Dict[str, Any]] = None
+    rag_override: bool = False
 
 class ScreeningResponse(BaseModel):
     ranking: List[RankingItem]

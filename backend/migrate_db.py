@@ -15,6 +15,10 @@ def migrate():
             ('ai_projects', 'INTEGER'),
             ('hr_decision', 'TEXT'),
             ('hr_notes', 'TEXT'),
+            ('interview_status', 'TEXT DEFAULT "PENDING"'),
+            ('evaluation_locked', 'BOOLEAN DEFAULT 0'),
+            ('interview_session_id', 'TEXT'),
+            ('interview_invite_sent', 'BOOLEAN DEFAULT 0'),
             ('repos_json', 'TEXT'),
             ('interview_readiness_json', 'TEXT'),
             ('skeptic_analysis_json', 'TEXT'),
@@ -39,7 +43,8 @@ def migrate():
             ('answers_json', 'TEXT'),
             ('followups_json', 'TEXT'),
             ('transcript_summary', 'TEXT'),
-            ('final_scores_json', 'TEXT')
+            ('final_scores_json', 'TEXT'),
+            ('expires_at', 'DATETIME')
         ]
         
         for col_name, col_type in missing_interview_cols:

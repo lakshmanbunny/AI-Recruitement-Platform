@@ -14,7 +14,7 @@ const Hero = () => {
                 Accelerate your hiring with deep-context candidate evaluation grounded in real-world GitHub evidence and technical intelligence.
             </p>
             <button
-                onClick={runScreening}
+                onClick={() => runScreening()}
                 disabled={isScreening}
                 className="flex items-center gap-2 px-8 py-4 bg-primary-blue text-white rounded-lg font-bold text-base hover:bg-primary-dark transition-all active:scale-[0.98] disabled:bg-blue-300 shadow-lg shadow-blue-500/20"
             >
@@ -23,7 +23,7 @@ const Hero = () => {
                 ) : (
                     <Zap size={20} className="fill-current" />
                 )}
-                <span>Run Screening</span>
+                <span>Run Recruitment Agents</span>
             </button>
         </section>
     );

@@ -1,0 +1,64 @@
+Evaluate the candidate strictly using ONLY the grounded evidence provided below.
+
+Follow all grounding, scoring, and citation rules defined in your system instructions.
+
+---
+
+JOB DESCRIPTION
+----------------
+{job_description}
+
+---
+
+SCORING WEIGHTS (Normalized)
+------------------------------
+Technical Skills Match: {weight_skills}
+Experience Relevance: {weight_experience}
+Project Impact: {weight_projects}
+GitHub Strength: {weight_github}
+Evidence Reliability: {weight_reliability}
+
+---
+
+VERIFIED RESUME EVIDENCE CHUNKS
+--------------------------------
+Each chunk has a unique ID. Cite using [R-ID].
+
+{resume_chunks}
+
+Example format:
+[R1] Skills: "Python, LangChain, FastAPI..."
+[R2] Experience: "Built multi-agent RAG pipeline..."
+[R3] Projects: "AI recruitment platform using FAISS..."
+
+---
+
+VERIFIED GITHUB EVIDENCE
+-------------------------
+GitHub Metrics:
+- Activity Score: {gh_activity}/100
+- AI Relevance Score: {gh_relevance}/100
+- Total Repositories: {gh_repo_count}
+
+Retrieved Code Evidence Chunks (cite as [G-ID]):
+
+{github_chunks}
+
+Example format:
+[G1] Repo: AI-Recruitment-Platform — "Implemented RAG pipeline using FAISS..."
+[G2] Repo: Agentic-AI-System — "Multi-agent orchestration using LangGraph..."
+
+---
+
+IMPORTANT GROUNDING RULES
+--------------------------
+• Use ONLY the evidence above.
+• Do NOT assume missing skills.
+• If a skill is not explicitly shown → mark as missing.
+• Every justification bullet MUST cite chunk IDs.
+• Do NOT invent projects or technologies.
+• Penalize missing required JD skills.
+
+---
+
+Now generate the evaluation JSON strictly following your system-defined schema.

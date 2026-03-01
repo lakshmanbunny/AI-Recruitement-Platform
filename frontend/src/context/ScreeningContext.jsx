@@ -31,11 +31,16 @@ export const ScreeningProvider = ({ children }) => {
     { id: 8, label: "Decision Synthesis", description: "Aggregating agent insights for final hiring consensus..." }
   ];
 
-  const API_BASE = 'http://127.0.0.1:8000/api';
+  const API_BASE = 'http://localhost:8000/api';
 
   const checkHealth = async () => {
     try {
-      const response = await fetch(`${API_BASE}/health`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       const data = await response.json();
       setHealthStatus(data.status);
     } catch (err) {
@@ -44,7 +49,7 @@ export const ScreeningProvider = ({ children }) => {
     }
   };
 
-  const runScreening = async () => {
+  const runScreening = async (evaluation_weights = null) => {
     setIsScreening(true);
     setResults(null);
     setCurrentStep(0);
@@ -56,6 +61,7 @@ export const ScreeningProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ evaluation_weights }),
       });
 
       if (!response.ok) throw new Error('Failed to start screening');
@@ -107,7 +113,12 @@ export const ScreeningProvider = ({ children }) => {
 
   const fetchResults = async () => {
     try {
-      const response = await fetch(`${API_BASE}/results`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(`${API_BASE}/results`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         const data = await response.json();
         if (data.ranking && data.ranking.length > 0) {
@@ -115,9 +126,12 @@ export const ScreeningProvider = ({ children }) => {
           setSelectedCandidateId(data.ranking[0].candidate_id);
           setCurrentStep(8); // Assume completed if we have results
         }
+      } else {
+        setError(`Backend responded with status: ${response.status}`);
       }
     } catch (err) {
       console.error('Failed to fetch existing results', err);
+      setError(err.name === 'AbortError' ? 'Initialization timeout' : err.message);
     } finally {
       setIsInitializing(false);
     }
@@ -160,6 +174,66 @@ export const ScreeningProvider = ({ children }) => {
     }
   };
 
+  const forceEvaluate = async (candidateId, evaluation_weights = null) => {
+    setIsScreening(true);
+    setResults(null);
+    setCurrentStep(0);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/force-evaluate/${candidateId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ evaluation_weights }),
+      });
+
+      if (!response.ok) throw new Error('Force evaluation failed');
+
+      const data = await response.json();
+      setResults(data);
+      setSelectedCandidateId(candidateId);
+      setIsScreening(false);
+      return data;
+    } catch (err) {
+      console.error('Force evaluation error:', err);
+      setError(err.message);
+      setIsScreening(false);
+      throw err;
+    }
+  };
+
+  const toggleRagOverride = async (candidateId, override) => {
+    try {
+      const response = await fetch(`${API_BASE}/rag-override/${candidateId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ override }),
+      });
+
+      if (!response.ok) throw new Error('Failed to toggle RAG override');
+
+      const data = await response.json();
+
+      if (results && results.evaluations[candidateId]) {
+        const updatedEvaluations = { ...results.evaluations };
+        updatedEvaluations[candidateId] = {
+          ...updatedEvaluations[candidateId],
+          rag_override: data.rag_override
+        };
+        setResults({ ...results, evaluations: updatedEvaluations });
+      }
+      return data;
+    } catch (err) {
+      console.error('Toggle RAG Override error:', err);
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const value = {
     isScreening,
     results,
@@ -171,6 +245,8 @@ export const ScreeningProvider = ({ children }) => {
     runScreening,
     checkHealth,
     submitHRDecision,
+    forceEvaluate,
+    toggleRagOverride,
     currentStep,
     STAGES
   };

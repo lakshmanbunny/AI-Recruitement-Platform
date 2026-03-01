@@ -15,6 +15,19 @@ class Candidate(Base):
     linkedin_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+class WoxsenCandidate(Base):
+    __tablename__ = "woxsen_candidates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    roll_number = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String, unique=True, index=True)
+    github_url = Column(String, nullable=True)
+    linkedin_url = Column(String, nullable=True)
+    resume_file_path = Column(String, nullable=True)
+    raw_resume_text = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class JobDescription(Base):
     __tablename__ = "job_descriptions"
 
@@ -60,11 +73,161 @@ class ScreeningResult(Base):
     final_synthesized_decision_json = Column(Text) # FinalSynthesizedDecision
     ai_evidence_json = Column(Text) # Transparency layer
     justification_json = Column(Text) # Bullet points
+    judge_audit_json = Column(Text) # Judge audit details
+    rubric_scores_json = Column(Text) # Detailed rubric breakdown
 
     rank_position = Column(Integer, nullable=True)
+    
+    # RAG Gating & Cache Metadata
+    retrieval_mode = Column(String, nullable=True) # e.g., "llama_index", "hybrid"
+    retrieval_version = Column(String, nullable=True) # e.g., "v1.0.1"
+    rag_enabled = Column(Boolean, default=True)
+    rag_status = Column(String, default="healthy") # healthy, failed, disabled
+    rag_override = Column(Boolean, default=False)
+
     hr_decision = Column(String, nullable=True) # APPROVED, REJECTED, ON_HOLD
     hr_notes = Column(Text, nullable=True)
+    
+    # Phase 8: Interview Trigger Flow & HITL
+    interview_status = Column(String, default="PENDING")  # PENDING, APPROVED, INTERVIEW_SENT, INTERVIEW_COMPLETED
+    evaluation_locked = Column(Boolean, default=False)
+    interview_session_id = Column(String, nullable=True)
+    interview_invite_sent = Column(Boolean, default=False)
+    
     evaluated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class RAGMetric(Base):
+    __tablename__ = "rag_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"))
+    screening_result_id = Column(Integer, ForeignKey("screening_results.id"))
+    
+    retrieval_score = Column(Float)
+    faithfulness_score = Column(Float)
+    coverage_score = Column(Float)
+    precision_score = Column(Float)
+    recall_score = Column(Float, nullable=True)
+    relevancy_score = Column(Float, nullable=True)
+    rag_health_status = Column(String) # HEALTHY, WARNING, CRITICAL
+    
+    evaluation_timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    candidate = relationship("Candidate")
+    screening_result = relationship("ScreeningResult")
+
+
+class RAGRetrievalMetric(Base):
+    """
+    Deterministic Zero-LLM Retrieval Quality Evaluation metrics.
+    """
+    __tablename__ = "rag_retrieval_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), index=True)
+    
+    precision = Column(Float, default=0.0)
+    recall = Column(Float, default=0.0)
+    coverage = Column(Float, default=0.0)
+    similarity = Column(Float, default=0.0)
+    diversity = Column(Float, default=0.0)
+    density = Column(Float, default=0.0)
+    overall_score = Column(Float, default=0.0)
+    
+    rag_health_status = Column(String, default="CRITICAL") # HEALTHY, WARNING, CRITICAL
+    
+    evaluated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    candidate = relationship("Candidate")
+
+class RAGEvaluationResult(Base):
+    """
+    Full RAGAS evaluation result for a candidate in a given screening run.
+    """
+    __tablename__ = "rag_evaluation_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"))
+    jd_hash = Column(String, nullable=True, index=True)
+
+    # RAGAS Metrics
+    precision = Column(Float, default=0.0)
+    recall = Column(Float, default=0.0)
+    faithfulness = Column(Float, default=0.0)
+    relevancy = Column(Float, default=0.0)
+    overall_score = Column(Float, default=0.0)
+
+    # Health & Gate
+    health_status = Column(String, default="CRITICAL")  # HEALTHY, WARNING, CRITICAL
+    gate_decision = Column(String, default="BLOCK")     # ALLOW, WARN, BLOCK
+    failure_reasons_json = Column(Text, nullable=True)
+    gating_reason = Column(Text, nullable=True)
+
+    # Override tracking
+    override_triggered = Column(Boolean, default=False)
+    override_reason = Column(Text, nullable=True)
+
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    candidate = relationship("Candidate")
+
+class RAGEvaluationJob(Base):
+    """
+    Queue for RAGAS evaluation background processing.
+    """
+    __tablename__ = "rag_evaluation_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), index=True)
+    status = Column(String, default="PENDING") # PENDING, RUNNING, COMPLETED, FAILED
+    
+    metrics_json = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    candidate = relationship("Candidate")
+
+class RAGLLMMetric(Base):
+    """
+    Post-LLM RAG evaluation metrics generated by the Enterprise Judge.
+    """
+    __tablename__ = "rag_llm_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), index=True)
+    
+    faithfulness = Column(Float, default=0.0)
+    answer_relevance = Column(Float, default=0.0)
+    hallucination_score = Column(Float, default=0.0)
+    context_utilization = Column(Float, default=0.0)
+    overall_score = Column(Float, default=0.0)
+    
+    rag_health_status = Column(String, default="CRITICAL") # GOOD, WARN, CRITICAL
+    explanation = Column(Text, nullable=True)
+    
+    evaluated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    candidate = relationship("Candidate")
+
+class RAGLLMEvalJob(Base):
+    """
+    Queue for Post-LLM RAG evaluation background processing.
+    """
+    __tablename__ = "rag_llm_eval_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), index=True)
+    status = Column(String, default="PENDING") # PENDING, RUNNING, COMPLETED, FAILED
+    metrics_json = Column(Text, nullable=True)
+    evaluation_weights_json = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    candidate = relationship("Candidate")
 
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"

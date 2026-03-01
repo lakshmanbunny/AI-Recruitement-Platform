@@ -1,0 +1,45 @@
+Theme
+☀️ Light
+Images
+Logo
+Favicon
+Components
+Buttons
+Primary
+Secondary
+Input
+Sample input
+Colors
+Primary:
+#BDDBFF
+Accent:
+#2286FE
+Background:
+#FFFFFF
+Text Primary:
+#2286FE
+Link:
+#2286FE
+Fonts
+ui-sans-serif
+system-ui
+sans-serif
+Apple Color Emoji
+Segoe UI Emoji
+Segoe UI Symbol
+Noto Color Emoji
+Typography
+primary: ui-sans-serif
+heading: ui-sans-serif
+h1: 36px
+h2: 16px
+body: 12px
+Spacing
+Base Unit:
+8
+Border Radius:
+0px
+Personality
+Tone: modern
+Energy: medium
+Audience: technology professionals

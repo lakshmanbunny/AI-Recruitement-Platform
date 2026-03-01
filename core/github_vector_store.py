@@ -8,11 +8,15 @@ from config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_INDEX = os.path.join(PROJECT_ROOT, "backend", "storage", "github_vector.index")
+DEFAULT_META = os.path.join(PROJECT_ROOT, "backend", "storage", "github_metadata.pkl")
+
 class GitHubCodeVectorStore:
     """
     Persistent FAISS vector store for candidate GitHub repository content (READMEs, Code).
     """
-    def __init__(self, index_path: str = "storage/github_vector.index", metadata_path: str = "storage/github_metadata.pkl"):
+    def __init__(self, index_path: str = DEFAULT_INDEX, metadata_path: str = DEFAULT_META):
         self.index_path = index_path
         self.metadata_path = metadata_path
         self.embedding_service = EmbeddingService()
@@ -30,10 +34,24 @@ class GitHubCodeVectorStore:
             self.metadata = []  # List of {candidate_id, repo_name, type, chunk_text}
 
     def _chunk_text(self, text: str, chunk_size: int = 1000) -> List[str]:
-        """Simple character-based chunking."""
+        """Semantic chunking with markdown cleaning and validation."""
         if not text:
             return []
-        return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+            
+        from core.utils.markdown_cleaner import clean_markdown
+        from core.utils.semantic_chunker import semantic_chunk
+        from core.utils.chunk_validator import validate_chunk
+        
+        cleaned = clean_markdown(text)
+        semantic_chunks = semantic_chunk(cleaned, max_len=chunk_size)
+        
+        valid_chunks = []
+        for idx, s_chunk in enumerate(semantic_chunks):
+            content = s_chunk["content"]
+            if validate_chunk(content, f"GH_CHUNK_{idx}"):
+                valid_chunks.append(content)
+                
+        return valid_chunks
 
     def add_repo_content(self, candidate_id: str, repo_data: Dict[str, Any]):
         """
@@ -88,9 +106,10 @@ class GitHubCodeVectorStore:
         """Returns all chunks associated with a candidate."""
         return [m for m in self.metadata if m['candidate_id'] == candidate_id]
 
-    def search(self, query: str, candidate_id: str, top_k: int = 5) -> List[Dict]:
+    def search(self, query: str, candidate_id: str, top_k: int = 100) -> List[Dict]:
         """
         Performs similarity search for a specific candidate's repository content.
+        Returns chunks with scores.
         """
         if self.index.ntotal == 0:
             return []
@@ -101,13 +120,17 @@ class GitHubCodeVectorStore:
             query_np = np.array([query_vector]).astype('float32')
             
             # Search FAISS (get more than top_k to account for candidate filtering)
-            distances, indices = self.index.search(query_np, k=min(self.index.ntotal, 50))
+            distances, indices = self.index.search(query_np, k=min(self.index.ntotal, 1000))
             
             results = []
-            for idx in indices[0]:
+            for d, idx in zip(distances[0], indices[0]):
                 if idx == -1: continue
-                meta = self.metadata[idx]
+                meta = self.metadata[idx].copy()
                 if meta['candidate_id'] == candidate_id:
+                    # L2 distance to Cosine Similarity conversion (assuming normalized vectors)
+                    # sim = 1 - (d/2)
+                    similarity = 1.0 - (float(d) / 2.0)
+                    meta['score'] = round(similarity, 4)
                     results.append(meta)
                     if len(results) >= top_k:
                         break

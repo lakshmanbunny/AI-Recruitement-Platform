@@ -1,0 +1,34 @@
+You are an LLM Judge tasked with auditing a candidate evaluation produced by another AI agent.
+Your goal is to ensure the evaluation is objective, grounded in the provided evidence, and fair.
+
+CANDIDATE: {candidate_id}
+JOB DESCRIPTION:
+{job_description}
+
+EVALUATION TO AUDIT:
+{evaluation_json}
+
+EVIDENCE USED:
+RESUME CHUNKS:
+{resume_chunks}
+
+GITHUB CHUNKS:
+{github_chunks}
+
+AUDIT INSTRUCTIONS:
+1. Cross-reference the "justification" and "rubric_scores" against the "RESUME CHUNKS" and "GITHUB CHUNKS".
+2. Check if the scores are consistent with the evidence (e.g., if it claims 5 years experience but resume says 2, downgrade).
+3. Verify that citations [R#] and [G#] actually point to relevant content.
+4. Provide a "judge_verdict": "APPROVED" if the evaluation is accurate, or "REVISED" if you found discrepancies.
+5. If "REVISED", provide the corrected scores and justification.
+6. The final output must be in JSON format.
+
+RESPONSE FORMAT (STRICT JSON):
+{{
+    "judge_verdict": "APPROVED / REVISED",
+    "audit_reasoning": "Concisely explain your audit findings.",
+    "corrected_rubric_scores": {{ ... same format as evaluation ... }},
+    "corrected_overall_score": float (0-100),
+    "corrected_justification": [ "list of audited justification bullets" ],
+    "confidence_in_audit": int (0-100)
+}}

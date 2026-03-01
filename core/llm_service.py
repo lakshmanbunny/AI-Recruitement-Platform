@@ -1,5 +1,7 @@
 import json
-from typing import Dict, List, Any
+import re
+import os
+from typing import Dict, List, Any, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langsmith import traceable
@@ -13,10 +15,18 @@ class LLMService:
     Enterprise-grade LLM Service with LangSmith observability and LangChain integration.
     """
     def __init__(self):
+        # Generator: Gemini 2.0 Pro (or latest Pro fallback)
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-pro",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.2,
+            convert_system_message_to_human=True
+        )
+        # Judge: Gemini 3.0 Pro (or latest Pro fallback)
+        self.judge_llm = ChatGoogleGenerativeAI(
+            model="gemini-3-pro-preview",
+            google_api_key=settings.GOOGLE_API_KEY,
+            temperature=0.1,
             convert_system_message_to_human=True
         )
 
@@ -28,119 +38,217 @@ class LLMService:
         resume_summary: str,
         github_username: str,
         github_features: Dict[str, Any],
-        evidence: List[Dict]
+        evidence: List[Dict],
+        resume_rag_evidence: Optional[Dict[str, Any]] = None,
+        weights: Optional[Dict[str, float]] = None
     ) -> Dict[str, Any]:
         """
-        Single-shot unified evaluation of resume and GitHub evidence.
+        Enterprise-grade grounded evaluation using Top-K evidence, citations, and dynamic weights.
         """
-        system_message = "You are a Senior AI Recruitment Agent providing unified candidate intelligence."
+        # 1. Default Weights if not provided
+        if not weights:
+            weights = {
+                "technical_skills": 0.30,
+                "experience_relevance": 0.20,
+                "project_impact": 0.20,
+                "github_strength": 0.20,
+                "evidence_reliability": 0.10
+            }
         
-        evidence_str = "\n".join([f"Repo: {e['repo_name']} | Source: {e['type']}\nContent: {e['chunk_text']}" for e in (evidence or [])])
-        if not evidence_str:
-            evidence_str = "No specific GitHub code evidence retrieved."
+        # 2. EVIDENCE PREPROCESSING (Part 2 & 2.3)
+        # Process Resume Chunks
+        resume_raw = resume_rag_evidence.get("raw_chunks", []) if resume_rag_evidence else []
+        # Lowered threshold to ensure dense keyword chunks (like Skills) aren't discarded
+        resume_filtered = [c for c in resume_raw if c.get("score", 0) >= 0.0]
+        resume_filtered.sort(key=lambda x: x.get("score", 0), reverse=True)
+        # REMOVED LIMITS: Passing all relevant chunks to Pro models
+        top_resume = resume_filtered
+        
+        # Process GitHub Chunks
+        github_filtered = [c for c in (evidence or []) if c.get("score", 0) >= 0.0]
+        github_filtered.sort(key=lambda x: x.get("score", 0), reverse=True)
+        # REMOVED LIMITS: Passing all relevant chunks to Pro models
+        top_github = github_filtered
+        
+        # Trace logs (Part 5)
+        logger.info(f"[TRACE] Resume chunks selected: {len(top_resume)}")
+        logger.info(f"[TRACE] GitHub chunks selected: {len(top_github)}")
+        
+        # 3. FORMAT CHUNKS WITH CITATIONS (Part 2.1 & 2.2)
+        resume_chunks_str = ""
+        for i, chunk in enumerate(top_resume, 1):
+            resume_chunks_str += f"[RESUME_CHUNK_ID: R{i}]\nSection: {chunk.get('section', 'Unknown').capitalize()}\nContent: {chunk.get('text', '')}\n\n"
+        
+        if not resume_chunks_str:
+            resume_chunks_str = "No high-relevance resume evidence retrieved (Similarity < 0.45)."
 
-        user_message_template = """
-        Provide a unified technical evaluation for the candidate based on their resume and GitHub profile.
+        github_chunks_str = ""
+        for i, chunk in enumerate(top_github, 1):
+            github_chunks_str += f"[GITHUB_CHUNK_ID: G{i}]\nRepo: {chunk.get('repo_name', 'Unknown')}\nContent: {chunk.get('chunk_text', '')}\n\n"
+        
+        if not github_chunks_str:
+            github_chunks_str = "No high-relevance GitHub code evidence retrieved (Similarity < 0.45)."
 
-        JOB DESCRIPTION:
-        {jd}
+        # 4. LOAD PROMPTS FROM FILES (Part 4)
+        try:
+            curr_dir = os.path.dirname(__file__)
+            with open(os.path.join(curr_dir, "prompts", "system_prompt_for_unified_candidate_eval.txt"), "r") as f:
+                system_prompt = f.read()
+            with open(os.path.join(curr_dir, "prompts", "unified_eval_user_template.txt"), "r") as f:
+                user_template = f.read()
+        except Exception as e:
+            logger.error(f"Failed to load prompt templates: {e}")
+            raise e
 
-        CANDIDATE RESUME SUMMARY:
-        {resume}
+        # 5. CONSTRUCT INPUT PAYLOAD
+        payload = {
+            "job_description": jd_text,
+            "weight_skills": weights.get("technical_skills", 0.3),
+            "weight_experience": weights.get("experience_relevance", 0.2),
+            "weight_projects": weights.get("project_impact", 0.2),
+            "weight_github": weights.get("github_strength", 0.2),
+            "weight_reliability": weights.get("evidence_reliability", 0.1),
+            "resume_chunks": resume_chunks_str,
+            "gh_activity": github_features.get('activity_score', 0),
+            "gh_relevance": github_features.get('ai_relevance_score', 0),
+            "gh_repo_count": github_features.get('repo_count', 0),
+            "github_chunks": github_chunks_str
+        }
 
-        GITHUB FEATURES (Engineered):
-        - Activity Score: {gh_activity}/100
-        - AI Relevance Score: {gh_relevance}/100
-        - Total Repos: {gh_repos}
-
-        RELEVANT GITHUB CODE EVIDENCE (RAG-Retrieved):
-        {evidence}
-
-        RESPONSE FORMAT (STRICT JSON):
-        {{
-            "resume_score": int (0-100),
-            "github_score": int (0-100),
-            "overall_score": int (0-100),
-            "justification": ["List of 4-6 high-impact bulleted reasons for this score. No paragraphs."]
-        }}
-        """
+        # LangSmith Trace Enhancement (Part 5)
+        ctx_chars = len(system_prompt + user_template)
+        from core.utils.context_hasher import compute_context_hash
+        generator_hash = compute_context_hash(resume_chunks_str + github_chunks_str)
+        logger.info(f"[TRACE] Context chars: {ctx_chars}")
+        logger.info(f"[TRACE] Tokens est: {ctx_chars // 4}")
+        logger.info(f"[TRACE] Weight Configuration: {json.dumps(weights)}")
+        logger.info(f"[TRACE] Generator context hash: {generator_hash}")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system_message),
-            ("human", user_message_template)
+            ("system", system_prompt),
+            ("human", user_template)
         ])
 
         chain = prompt | self.llm
 
-        config = {
-            "tags": ["stage:unified_evaluation", "component:llm_agent"],
-            "metadata": {
-                "candidate_id": candidate_id,
-                "github_username": github_username,
-                "token_estimate": len(system_message + user_message_template) // 4
-            }
-        }
+        # 6. INVOCATION WITH VALIDATION AND RETRY (Part 6)
+        max_attempts = 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"Invoking Enterprise Unified Intelligence Agent for {candidate_id} (Attempt {attempt})")
+                response = chain.invoke(payload)
+                
+                # Parse JSON
+                content = response.content
+                # Strip potential markdown code blocks
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                
+                eval_data = json.loads(content)
+                eval_data["generator_hash"] = generator_hash # Pass this out for DB / Worker usage if needed
 
-        # Audit Logging
-        full_audit_prompt = system_message + user_message_template.format(
-            jd=jd_text, 
-            resume=resume_summary, 
-            gh_activity=github_features.get('activity_score', 0),
-            gh_relevance=github_features.get('ai_relevance_score', 0),
-            gh_repos=github_features.get('repo_count', 0),
-            evidence=evidence_str
-        )
-        logger.warning(
-            f"""
-            ===== LLM INPUT AUDIT (UNIFIED AGENT) =====
-            Candidate: {candidate_id}
-            Stage: stage_unified_evaluation
-            Total Chars: {len(full_audit_prompt)}
-            Estimated Tokens: {len(full_audit_prompt)//4}
-            Resume Context Size: {len(resume_summary)}
-            GitHub Evidence Size: {len(evidence_str)}
-            ============================
-            """
-        )
+                # --- PHASE 2: LLM JUDGE AUDIT ---
+                try:
+                    logger.info(f"Invoking Enterprise LLM Judge (Gemini 3.0 Pro) for audit of {candidate_id}")
+                    with open(os.path.join(curr_dir, "prompts", "judge_audit_user_template.txt"), "r") as f:
+                        judge_template = f.read()
+                    
+                    judge_prompt = ChatPromptTemplate.from_messages([
+                        ("system", "You are a senior hiring auditor. Audit the following AI recruitment evaluation for accuracy and fairness."),
+                        ("human", judge_template)
+                    ])
+                    
+                    judge_chain = judge_prompt | self.judge_llm
+                    judge_payload = {
+                        "candidate_id": candidate_id,
+                        "job_description": jd_text,
+                        "evaluation_json": json.dumps(eval_data, indent=2),
+                        "resume_chunks": resume_chunks_str,
+                        "github_chunks": github_chunks_str
+                    }
+                    
+                    judge_response = judge_chain.invoke(judge_payload)
+                    judge_content = judge_response.content
+                    if "```json" in judge_content:
+                        judge_content = judge_content.split("```json")[1].split("```")[0].strip()
+                    elif "```" in judge_content:
+                        judge_content = judge_content.split("```")[1].split("```")[0].strip()
+                    
+                    audit_res = json.loads(judge_content)
+                    
+                    # Merge Judge's revisions if any
+                    if audit_res.get("judge_verdict") == "REVISED":
+                        logger.warning(f"LLM Judge REVISED evaluation for {candidate_id}: {audit_res.get('audit_reasoning')}")
+                        eval_data["rubric_scores"] = audit_res.get("corrected_rubric_scores", eval_data.get("rubric_scores"))
+                        eval_data["overall_score"] = audit_res.get("corrected_overall_score", eval_data.get("overall_score"))
+                        eval_data["justification"] = audit_res.get("corrected_justification", eval_data.get("justification"))
+                    
+                    eval_data["judge_audit"] = {
+                        "verdict": audit_res.get("judge_verdict", "APPROVED"),
+                        "reasoning": audit_res.get("audit_reasoning", "No discrepancies found."),
+                        "confidence": audit_res.get("confidence_in_audit", 100)
+                    }
+                except Exception as je:
+                    logger.error(f"LLM Judge Audit failed for {candidate_id}: {je}")
+                    eval_data["judge_audit"] = {"verdict": "ERROR", "reasoning": str(je)}
 
-        logger.info(f"Invoking Unified Candidate Intelligence Agent for {candidate_id}")
-        try:
-            response = chain.invoke({
-                "jd": jd_text,
-                "resume": resume_summary,
-                "gh_activity": github_features.get('activity_score', 0),
-                "gh_relevance": github_features.get('ai_relevance_score', 0),
-                "gh_repos": github_features.get('repo_count', 0),
-                "evidence": evidence_str
-            }, config=config)
-            
-            content = response.content
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                # Extract AI-assessed RAG metrics (Stage 2)
+                eval_data["precision_score"] = eval_data.get("precision_score", 0)
+                eval_data["recall_score"] = eval_data.get("recall_score", 0)
+                
+                # Validation Logic
+                issues = []
+                # Check citations in justification
+                for bullet in eval_data.get("justification", []):
+                    if not re.search(r"\[[RG][0-9]+\]", bullet):
+                        issues.append("Missing citation in justification bullet")
+                
+                # Check score ranges
+                rubric = eval_data.get("rubric_scores", {})
+                for k, v in rubric.items():
+                    if not (0 <= v <= 10):
+                        v_int = int(v) if isinstance(v, (int, float)) else 0
+                        if not (0 <= v_int <= 10):
+                            issues.append(f"Rubric score {k}={v} out of range [0-10]")
+                
+                if issues:
+                    logger.warning(f"Validation failed for candidate {candidate_id}: {'; '.join(issues)}")
+                    if attempt < max_attempts:
+                        logger.info("Retrying evaluation...")
+                        continue
+                
+                # Add transparency layer mapping for UI
+                eval_data["ai_evidence"] = []
+                for i, chunk in enumerate(top_resume, 1):
+                    eval_data["ai_evidence"].append({
+                        "source": f"Resume [R{i}]",
+                        "section": chunk.get("section", "General"),
+                        "snippet": chunk.get("text", "")
+                    })
+                for i, chunk in enumerate(top_github, 1):
+                    eval_data["ai_evidence"].append({
+                        "source": f"GitHub [G{i}]",
+                        "repo": chunk.get("repo_name", "Unknown"),
+                        "snippet": chunk.get("chunk_text", "")
+                    })
+                
+                eval_data["resume_rag_evidence"] = resume_rag_evidence # Keep for fallback compatibility
+                
+                return eval_data
 
-            result = json.loads(content)
-            
-            # Defensive check for list fields
-            if "justification" in result and isinstance(result["justification"], str):
-                result["justification"] = [result["justification"]]
-            
-            # Map retrieved evidence to a cleaner format for the UI transparency layer
-            result["ai_evidence"] = []
-            for e in (evidence or [])[:5]: # Top 5 evidence points
-                result["ai_evidence"].append({
-                    "repo": e.get("repo_name", "Unknown"),
-                    "file": e.get("file_path", "Unknown"),
-                    "type": e.get("type", "content"),
-                    "snippet": e.get("chunk_text", "")[:300] + "..." if len(e.get("chunk_text", "")) > 300 else e.get("chunk_text", "")
-                })
-
-            logger.info(f"Unified evaluation completed for {candidate_id}. Overall: {result.get('overall_score')}")
-            return result
-        except Exception as e:
-            logger.error(f"Unified evaluation failed for {candidate_id}: {str(e)}")
-            raise e
+            except Exception as e:
+                logger.error(f"LLM Call failed for {candidate_id}: {str(e)}")
+                if attempt < max_attempts:
+                    continue
+                return {
+                    "evaluation_blocked": False,
+                    "error": f"Evaluation failed after {max_attempts} attempts: {str(e)}",
+                    "overall_score": 0,
+                    "justification": ["System error during evaluation."]
+                }
+        return {}
 
     @traceable(name="Interview Readiness Evaluation")
     def interview_readiness_evaluation(self, candidate_profile: Dict[str, Any]) -> Dict[str, Any]:

@@ -11,3 +11,9 @@ google-generativeai
 httpx
 faiss-cpu
 sqlalchemy
+llama-index
+llama-index-vector-stores-faiss
+llama-index-embeddings-google
+pandas
+openpyxl
+

@@ -99,6 +99,12 @@ async def get_token(room_id: str, identity: str):
     
     return {"token": token.to_jwt()}
 
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from app.db.database import get_db
+from app.db.models import InterviewSession, ScreeningResult
+
 @router.get("/status")
 async def get_interview_status(room_id: str):
     """
@@ -109,3 +115,60 @@ async def get_interview_status(room_id: str):
         raise HTTPException(status_code=404, detail="Interview not found")
     
     return interview
+
+@router.get("/session/{session_id}")
+async def validate_session(session_id: str, db: Session = Depends(get_db)):
+    """
+    Validates a HITL Interview session token.
+    """
+    # 1. Verify existence
+    session = db.query(InterviewSession).filter(InterviewSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Invalid session token")
+        
+    # 2. Verify not expired
+    if datetime.now().astimezone() > session.expires_at.astimezone():
+        raise HTTPException(status_code=403, detail="Session token expired")
+        
+    # 3. Verify status
+    screening = db.query(ScreeningResult).filter(ScreeningResult.candidate_id == session.candidate_id).order_by(ScreeningResult.evaluated_at.desc()).first()
+    if not screening or screening.interview_status not in ["APPROVED", "INTERVIEW_SENT"]:
+        # Also allow if already completed just to show results, but block starting
+        if screening and screening.interview_status == "INTERVIEW_COMPLETED":
+            return {"status": "completed", "message": "Interview already completed"}
+        raise HTTPException(status_code=403, detail="Interview not authorized")
+        
+    import json
+    questions = json.loads(session.questions_json) if session.questions_json else []
+    
+    return {
+        "status": "active",
+        "candidate_id": session.candidate_id,
+        "questions": questions,
+        "token": session_id
+    }
+
+class SessionCompleteRequest(BaseModel):
+    transcript_summary: str
+    final_scores: dict
+
+@router.post("/session/{session_id}/complete")
+async def complete_session(session_id: str, request: SessionCompleteRequest, db: Session = Depends(get_db)):
+    """
+    Marks the interview session as completed and updates candidate state.
+    """
+    session = db.query(InterviewSession).filter(InterviewSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Invalid session token")
+        
+    session.status = "completed"
+    session.transcript_summary = request.transcript_summary
+    session.final_scores_json = json.dumps(request.final_scores)
+    session.completed_at = datetime.now()
+    
+    screening = db.query(ScreeningResult).filter(ScreeningResult.candidate_id == session.candidate_id).order_by(ScreeningResult.evaluated_at.desc()).first()
+    if screening:
+        screening.interview_status = "INTERVIEW_COMPLETED"
+        
+    db.commit()
+    return {"status": "success"}

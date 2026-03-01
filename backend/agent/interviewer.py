@@ -107,7 +107,27 @@ async def entrypoint(ctx: JobContext):
         @agent_session.on("user_input_transcribed")
         def on_user_transcribed(event):
             nonlocal last_transcribed_text
-            text = event.text.strip()
+            print(f"--- [DEBUG EVENT]: {type(event)} ---")
+            print(f"--- [DEBUG DIR]: {dir(event)} ---")
+            try:
+                print(f"--- [DEBUG VARS]: {vars(event) if hasattr(event, '__dict__') else 'No vars'} ---")
+            except: pass
+            
+            try:
+                if hasattr(event, "transcription") and hasattr(event.transcription, "text"):
+                    text = event.transcription.text.strip()
+                elif hasattr(event, "text"):
+                    text = getattr(event, "text").strip()
+                elif hasattr(event, "interim_transcript"):
+                    text = getattr(event, "interim_transcript").strip()
+                elif hasattr(event, "user_input"):
+                    text = getattr(event, "user_input").strip()
+                else:
+                    text = str(getattr(event, "transcription", "")).strip()
+            except Exception as e:
+                print(f"Error parsing transcription: {e}")
+                text = ""
+                
             if text:
                 print(f"[USER]: {text}")
                 last_transcribed_text = text

@@ -1,0 +1,24 @@
+Internship Role: AI Safety & Alignment Engineer
+Duration: [3-6 Months]Location: [Remote/Office Location]
+The Mission
+As LLMs become the backbone of modern enterprise, the risks—from prompt injection and data exfiltration to toxic outputs—are scaling just as fast. We are building a robust Safety Orchestration Layer that sits between the model and the user to ensure every interaction is secure, compliant, and grounded.
+What You’ll Do
+Red Teaming: Actively stress-test LLMs to find vulnerabilities, jailbreaks, and edge cases.
+Guardrail Development: Help design and implement real-time filtering systems (e.g., PII detection, hallucination checks).
+Benchmark Design: Build datasets to evaluate model safety and measure the "drift" in safety performance over time.
+Research: Keep us at the cutting edge by summarizing the latest papers on Constitutional AI, RLHF, and adversarial robustness.
+Who You Are
+The Mindset: You are naturally skeptical. You enjoy finding the "hole" in a logic puzzle.
+The Stack: Proficient in Python and familiar with frameworks like PyTorch or JAX.
+LLM Literacy: You’ve played with LangChain, LlamaIndex, or worked directly with OpenAI/Anthropic APIs.
+Communication: You can explain a complex technical risk to a non-technical stakeholder without using too much jargon.
+Strategic Tips for Your Search
+1. Focus on "Adversarial Thinking"
+Most interns want to build features. For safety, you need the ones who want to break features. In your JD, emphasize that you value people who have participated in CTFs (Capture The Flag) or have a background in cybersecurity.
+2. Mention Specific Safety Frameworks
+To attract high-quality candidates, mention tools they might actually use. This shows you have a technical roadmap. Consider listing:
+NeMo Guardrails (NVIDIA)
+Llama Guard (Meta)
+Guardrails AI (Open source)
+3. The "Why" Matters
+Top-tier AI talent is currently very concerned with the ethics of the industry. Use words like "Alignment," "Trustworthiness," and "Robustness." This signals that your company isn't just trying to "censor" AI, but is actually solving a deep technical problem.

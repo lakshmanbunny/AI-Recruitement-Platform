@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
 build/
 develop/
 dist/
@@ -21,11 +22,18 @@ wheels/
 .installed.cfg
 *.egg
 .env
+
+# Databases
 paradigm_ai.db
+paradigm_ai.db-shm
+paradigm_ai.db-wal
+recruit.db
+recruitment.db
 
 # Logs
 *.log
 agent_debug.log
+backend_log.txt
 
 # Frontend
 node_modules/
@@ -39,3 +47,29 @@ brain/
 .gemini/
 .agent/
 temp_resumes/
+
+# Excel / CSV / temp data
+*.xlsx
+*.csv
+dupes.csv
+
+# Temp scripts (one-off debug/migration helpers)
+backend/get-pip.py
+backend/install_uv.ps1
+check_candidates.py
+check_db.py
+check_db_count.py
+check_nagendla.py
+cleanup_data.py
+debug_retrieval.py
+debug_scores.py
+inspect_vishwa.py
+sync_scores.py
+verify_lookup.py
+test_import.py
+list_models.py
+generate_downloader.py
+api_res.json
+verification_output.txt
+files_all.txt
+output.json
