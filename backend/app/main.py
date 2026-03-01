@@ -16,6 +16,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.init_db import init_db
 
+# ------ LangSmith Tracing ------
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+if settings.LANGCHAIN_API_KEY:
+    os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
+os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT or "recruitment-poc"
+
 # Initialize database first before importing routes/services that depend on it
 init_db()
 

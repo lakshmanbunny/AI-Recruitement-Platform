@@ -47,6 +47,8 @@ class CandidateEvaluation(BaseModel):
     overall_score: int = 0
     resume_score: int = 0
     github_score: int = 0
+    precision_score: int = 0
+    recall_score: int = 0
     repo_count: int = 0
     ai_projects: int = 0
     justification: List[str] = []
@@ -57,8 +59,19 @@ class CandidateEvaluation(BaseModel):
     final_synthesized_decision: Optional[FinalSynthesizedDecision] = None
     hr_decision: Optional[Dict[str, Any]] = None
     ai_evidence: List[Dict[str, Any]] = []
+    code_evidence: List[Dict[str, Any]] = []
     rag_quality: Optional[Dict[str, Any]] = None
     rag_override: bool = False
+    evaluation_blocked: bool = False
+    judge_audit: Optional[Dict[str, Any]] = None
+    rubric_scores: Optional[Dict[str, Any]] = None
+    raw_resume_text: Optional[str] = None
+    github_features: Optional[Dict[str, Any]] = None
+    github_rubric: Optional[Dict[str, Any]] = None
+    github_strengths: List[str] = []
+    github_weaknesses: List[str] = []
+    github_justification: Optional[str] = None
+    stage: Optional[str] = None
 
 class ScreeningResponse(BaseModel):
     ranking: List[RankingItem]

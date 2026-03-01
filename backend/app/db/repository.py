@@ -189,6 +189,30 @@ def delete_screening_result(db: Session, candidate_id: int, jd_id: int):
         return True
     return False
 
+def update_screening_audit(db: Session, candidate_id: int, jd_id: int, agent_type: str, audit_data: dict):
+    """
+    Updates the audit results for a specific agent type in the ScreeningResult record.
+    agent_type can be 'unified', 'readiness', or 'skeptic'.
+    """
+    result = get_screening_result(db, candidate_id, jd_id)
+    if not result:
+        return None
+        
+    if agent_type == 'unified':
+        result.judge_audit_json = json.dumps(audit_data)
+    elif agent_type == 'readiness':
+        data = json.loads(result.interview_readiness_json or "{}")
+        data["judge_audit"] = audit_data
+        result.interview_readiness_json = json.dumps(data)
+    elif agent_type == 'skeptic':
+        data = json.loads(result.skeptic_analysis_json or "{}")
+        data["judge_audit"] = audit_data
+        result.skeptic_analysis_json = json.dumps(data)
+        
+    db.commit()
+    db.refresh(result)
+    return result
+
 # --- Interview Session Repositories ---
 def create_interview_session(db: Session, candidate_id: int, session_id: str, job_id: Optional[int] = None):
     db_session = InterviewSession(

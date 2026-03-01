@@ -12,6 +12,7 @@ export const useScreening = () => {
 
 export const ScreeningProvider = ({ children }) => {
   const [isScreening, setIsScreening] = useState(false);
+  const [isRunningStage2, setIsRunningStage2] = useState(false);
   const [results, setResults] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [healthStatus, setHealthStatus] = useState('unknown');
@@ -20,15 +21,13 @@ export const ScreeningProvider = ({ children }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const STAGES = [
-    { id: 0, label: "System Initialization", description: "Setting up recruitment runtime and agent memory..." },
-    { id: 1, label: "Data Ingestion", description: "Loading candidate resumes and job specifications..." },
-    { id: 2, label: "Semantic Indexing", description: "Generating vector embeddings for candidate profiles..." },
-    { id: 3, label: "Neural Retrieval", description: "Performing similarity search across candidate pool..." },
-    { id: 4, label: "GitHub Validation", description: "Verifying technical evidence and code quality metrics..." },
-    { id: 5, label: "Holistic Evaluation", description: "Running cross-agent technical assessment node..." },
-    { id: 6, label: "Readiness Audit", description: "Evaluating production readiness and interview fit..." },
-    { id: 7, label: "Skeptic Review", description: "Performing adversarial risk audit and risk detection..." },
-    { id: 8, label: "Decision Synthesis", description: "Aggregating agent insights for final hiring consensus..." }
+    { id: 0, label: "System Initialization", description: "Setting up 3-Stage Funnel runtime..." },
+    { id: 1, label: "Loading Candidate Data", description: "Ingesting candidate resumes and job specifications..." },
+    { id: 2, label: "Stage 1: Flash Extraction & Scoring", description: "Gemini 2.0 Flash scoring all candidates against JD..." },
+    { id: 3, label: "Funnel Gate: Shortlisting Top 60", description: "Filtering top candidates by base score..." },
+    { id: 4, label: "Stage 2: GitHub Verification", description: "Verifying technical evidence from GitHub repos..." },
+    { id: 5, label: "Stage 3: Enterprise Agent Evaluation", description: "Running unified evaluation, readiness, and skeptic agents..." },
+    { id: 6, label: "Finalizing Results", description: "Persisting results and generating rankings..." },
   ];
 
   const API_BASE = 'http://localhost:8000/api';
@@ -94,7 +93,15 @@ export const ScreeningProvider = ({ children }) => {
             if (data.results) {
               setResults(data.results);
               if (data.results.ranking && data.results.ranking.length > 0) {
-                setSelectedCandidateId(data.results.ranking[0].candidate_id);
+                setSelectedCandidateId(prev => prev || data.results.ranking[0].candidate_id);
+              }
+            }
+
+            // Handle incremental batch updates (partial results)
+            if (data.partial_results) {
+              setResults(data.partial_results);
+              if (!selectedCandidateId && data.partial_results.ranking && data.partial_results.ranking.length > 0) {
+                setSelectedCandidateId(data.partial_results.ranking[0].candidate_id);
               }
             }
           } catch (e) {
@@ -124,7 +131,7 @@ export const ScreeningProvider = ({ children }) => {
         if (data.ranking && data.ranking.length > 0) {
           setResults(data);
           setSelectedCandidateId(data.ranking[0].candidate_id);
-          setCurrentStep(8); // Assume completed if we have results
+          setCurrentStep(6); // Assume completed if we have results
         }
       } else {
         setError(`Backend responded with status: ${response.status}`);
@@ -174,10 +181,10 @@ export const ScreeningProvider = ({ children }) => {
     }
   };
 
+  const [isForceEvaluating, setIsForceEvaluating] = useState(false);
+
   const forceEvaluate = async (candidateId, evaluation_weights = null) => {
-    setIsScreening(true);
-    setResults(null);
-    setCurrentStep(0);
+    setIsForceEvaluating(true);
     setError(null);
 
     try {
@@ -191,16 +198,20 @@ export const ScreeningProvider = ({ children }) => {
 
       if (!response.ok) throw new Error('Force evaluation failed');
 
-      const data = await response.json();
-      setResults(data);
+      // After agent runs, always fetch fresh full results so ranking updates correctly
+      const freshRes = await fetch(`${API_BASE}/results`);
+      if (!freshRes.ok) throw new Error('Failed to refresh results after evaluation');
+
+      const freshData = await freshRes.json();
+      setResults(freshData);
       setSelectedCandidateId(candidateId);
-      setIsScreening(false);
-      return data;
+      return freshData;
     } catch (err) {
       console.error('Force evaluation error:', err);
       setError(err.message);
-      setIsScreening(false);
       throw err;
+    } finally {
+      setIsForceEvaluating(false);
     }
   };
 
@@ -234,8 +245,66 @@ export const ScreeningProvider = ({ children }) => {
     }
   };
 
+  const runStage2 = async () => {
+    setIsRunningStage2(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/run-stage-2-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) throw new Error(`Stage 2 failed: ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.error) throw new Error(data.error);
+            if (data.step !== undefined) setCurrentStep(data.step);
+
+            if (data.partial_results || data.results) {
+              const incoming = data.partial_results || data.results;
+              setResults(prev => {
+                if (!prev) return incoming;
+                // Merge: update evaluations, replace ranking
+                const mergedEvals = { ...(prev.evaluations || {}), ...(incoming.evaluations || {}) };
+                return {
+                  ranking: incoming.ranking || prev.ranking,
+                  evaluations: mergedEvals,
+                };
+              });
+            }
+          } catch (e) {
+            console.error('Stage 2 stream parse error:', e);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Stage 2 error:', err);
+      setError(err.message);
+    } finally {
+      setIsRunningStage2(false);
+    }
+  };
+
   const value = {
     isScreening,
+    isRunningStage2,
+    isForceEvaluating,
     results,
     healthStatus,
     selectedCandidateId,
@@ -243,6 +312,7 @@ export const ScreeningProvider = ({ children }) => {
     error,
     isInitializing,
     runScreening,
+    runStage2,
     checkHealth,
     submitHRDecision,
     forceEvaluate,

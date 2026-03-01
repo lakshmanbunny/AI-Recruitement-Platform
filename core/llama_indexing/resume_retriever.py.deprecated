@@ -13,7 +13,7 @@ class ResumeHybridRetriever:
         Whole-Candidate Retrieval: Queries the vector DB using a strict
         exact match filter on the candidate_email to guarantee no chunk starvation.
         """
-        # 1. Apply Strict Metadata Filtration
+        # 1. Apply Strict Metadata Filtration (Try passed case first)
         filters = MetadataFilters(
             filters=[ExactMatchFilter(key="candidate_email", value=candidate_email)]
         )
@@ -31,6 +31,16 @@ class ResumeHybridRetriever:
         # 3. Retrieve chunks 
         try:
             nodes = retriever.retrieve(job_description)
+            
+            # If no chunks found, try uppercase match for the existing persist index
+            if not nodes:
+                logger.info(f"0 chunks found for {candidate_email}. Retrying with uppercase: {candidate_email.upper()}")
+                filters = MetadataFilters(
+                    filters=[ExactMatchFilter(key="candidate_email", value=candidate_email.upper())]
+                )
+                retriever = self.indexer.get_retriever(similarity_top_k=top_k, filters=filters)
+                nodes = retriever.retrieve(job_description)
+
             
             results = []
             for node_with_score in nodes:

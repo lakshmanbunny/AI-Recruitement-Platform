@@ -102,13 +102,13 @@ const AppContent = () => {
               <DashboardLayout>
                 <Routes>
                   <Route path="/" element={
-                    isScreening ? <Navigate to="/processing" /> :
+                    isScreening && !results ? <Navigate to="/processing" /> :
                       results ? <Navigate to="/results" /> :
                         <Dashboard />
                   } />
                   <Route path="/processing" element={
-                    isScreening ? <Processing /> :
-                      results ? <Navigate to="/results" /> :
+                    results ? <Navigate to="/results" /> :
+                      isScreening ? <Processing /> :
                         <Navigate to="/" />
                   } />
                   <Route path="/results" element={

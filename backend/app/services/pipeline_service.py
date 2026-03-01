@@ -10,31 +10,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from core.settings import settings
 from workflows.init_workflow import create_workflow
 from config.logging_config import get_logger
-from core.llama_indexing.resume_indexer import ResumeLlamaIndexer
 
 import json
 from fastapi.responses import StreamingResponse
 
 from app.db.database import SessionLocal
 from app.db import repository
-from app.db.models import JobDescription
-from data.sample_resumes import SAMPLE_RESUMES
+from app.db.models import JobDescription, ScreeningResult
 
 logger = get_logger(__name__)
 
 class PipelineService:
     def __init__(self):
         self.workflow = create_workflow()
-        self.llama_indexer = ResumeLlamaIndexer()
-        
-        # Clear stale results on startup if version mismatch
-        db = SessionLocal()
-        try:
-            cleared = repository.clear_stale_results(db, settings.RETRIEVAL_VERSION)
-            if cleared > 0:
-                logger.info(f"[CACHE INVALIDATION] Cleared {cleared} stale results for version {settings.RETRIEVAL_VERSION}")
-        finally:
-            db.close()
+        logger.info("[PIPELINE] 3-Stage Funnel workflow initialized (Zero Embeddings)")
 
     async def _get_or_create_active_jd(self, db):
         jd = repository.get_active_jd(db)
@@ -67,6 +56,8 @@ class PipelineService:
                     candidates_to_screen.append({
                         "candidate_id": wc.roll_number,
                         "name": wc.name,
+                        "email": wc.email,
+                        "raw_resume_text": wc.raw_resume_text or "",
                         "links": {
                             "github": wc.github_url or "",
                             "linkedin": wc.linkedin_url or ""
@@ -74,142 +65,95 @@ class PipelineService:
                     })
             
             if not candidates_to_screen:
-                candidates_to_screen = SAMPLE_RESUMES
+                raise ValueError("No candidates found in the woxsen_candidates database, and no external candidates were provided. Aborting screening.")
             
             all_cached = True
             cached_ranking = []
             cached_evaluations = {}
             
-            # ALWAYS load cache for partial updates (e.g force-evaluate 1 candidate)
-            if True:
-                for res in candidates_to_screen:
-                    cand = repository.get_candidate_by_fuzzy_id(db, res['candidate_id'])
-                    
-                    if not cand:
-                        all_cached = False
-                        break
-                        
-                    result = repository.get_screening_result(db, cand.id, active_jd.id)
-                    
-                    # STRICT CACHE LOOKUP: Must match version and be healthy
-                    if not result or result.retrieval_version != settings.RETRIEVAL_VERSION:
-                        all_cached = False
-                        break
-                    
-                    if result.rag_status != "healthy" or not result.rag_enabled:
-                        all_cached = False
-                        break
-                    
-                    # Verify index exists on disk
-                    if not self.llama_indexer.is_llama_index_ready():
-                        logger.warning("[CACHE BYPASS] LlamaIndex not ready on disk. Forcing fresh run.")
-                        all_cached = False
-                        break
-                    
-                    # Robust parsing: ensure we don't pass empty dicts to Pydantic if we want None
-                    def safe_json_load(val, default=None):
-                        if not val or val == '{}' or val == '[]':
-                            return default
-                        try:
-                            data = json.loads(val)
-                            return data if data else default
-                        except:
-                            return default
+            # Helper for robust JSON loading
+            def safe_json_load(val, default=None):
+                if not val or val == '{}' or val == '[]':
+                    return default
+                try:
+                    data = json.loads(val)
+                    return data if data else default
+                except:
+                    return default
 
-                    cached_evaluations[res['candidate_id']] = {
-                        "overall_score": int(result.overall_score or 0),
-                        "resume_score": int(result.resume_score or 0),
-                        "github_score": int(result.github_score or 0),
-                        "repo_count": getattr(result, 'repo_count', 0) or 0,
-                        "ai_projects": getattr(result, 'ai_projects', 0) or 0,
-                        "justification": safe_json_load(getattr(result, 'justification_json', None), [result.recommendation] if result.recommendation else []),
-                        "repos": safe_json_load(getattr(result, 'repos_json', None), []),
-                        "interview_readiness": safe_json_load(getattr(result, 'interview_readiness_json', None)),
-                        "skeptic_analysis": safe_json_load(getattr(result, 'skeptic_analysis_json', None)),
-                        "final_decision": result.recommendation,
-                        "final_synthesized_decision": safe_json_load(getattr(result, 'final_synthesized_decision_json', None)),
-                        "hr_decision": {
-                            "decision": getattr(result, 'hr_decision', None),
-                            "notes": getattr(result, 'hr_notes', None)
-                        },
-                        "ai_evidence": safe_json_load(getattr(result, 'ai_evidence_json', None), []),
-                        "rag_quality": {
-                            "status": getattr(result, 'rag_quality_status', "READY"),
-                            "score": getattr(result, 'rag_quality_score', 1.0)
-                        },
-                        "evaluation_blocked": getattr(result, 'rag_quality_status', "READY") != "READY",
-                        "interview_status": getattr(result, 'interview_status', "PENDING"),
-                        "evaluation_locked": getattr(result, 'evaluation_locked', False),
-                        "interview_session_id": getattr(result, 'interview_session_id', None)
-                    }
-                    cached_ranking.append({
-                        "candidate_id": res['candidate_id'],
-                        "name": cand.name,
-                        "score": result.overall_score,
-                        "github_url": cand.github_url
-                    })
+            # Check cache for partial updates (e.g force-evaluate 1 candidate)
+            for res in candidates_to_screen:
+                cand = repository.get_candidate_by_fuzzy_id(db, res['candidate_id'])
+                if not cand:
+                    all_cached = False
+                    break
+                    
+                result = repository.get_screening_result(db, cand.id, active_jd.id)
+                if not result:
+                    all_cached = False
+                    break
 
-                if all_cached and cached_ranking and not force_eval:
-                    logger.info("[DB CACHE HIT] Returning results from database.")
-                    # Sort ranking
-                    cached_ranking.sort(key=lambda x: x["score"], reverse=True)
-                    for idx, item in enumerate(cached_ranking, 1):
-                        item["rank"] = idx
-                    return {
-                        "ranking": cached_ranking,
-                        "evaluations": cached_evaluations
-                    }
+                cached_evaluations[res['candidate_id']] = {
+                    "overall_score": int(result.overall_score or 0),
+                    "resume_score": int(result.resume_score or 0),
+                    "github_score": int(result.github_score or 0),
+                    "repo_count": getattr(result, 'repo_count', 0) or 0,
+                    "ai_projects": getattr(result, 'ai_projects', 0) or 0,
+                    "justification": safe_json_load(getattr(result, 'justification_json', None), [result.recommendation] if result.recommendation else []),
+                    "repos": safe_json_load(getattr(result, 'repos_json', None), []),
+                    "interview_readiness": safe_json_load(getattr(result, 'interview_readiness_json', None)),
+                    "skeptic_analysis": safe_json_load(getattr(result, 'skeptic_analysis_json', None)),
+                    "final_decision": result.recommendation,
+                    "hr_decision": {
+                        "decision": getattr(result, 'hr_decision', None),
+                        "notes": getattr(result, 'hr_notes', None)
+                    },
+                    "ai_evidence": safe_json_load(getattr(result, 'ai_evidence_json', None), []),
+                    "interview_status": getattr(result, 'interview_status', "PENDING"),
+                    "evaluation_locked": getattr(result, 'evaluation_locked', False),
+                    "interview_session_id": getattr(result, 'interview_session_id', None)
+                }
+                cached_ranking.append({
+                    "candidate_id": res['candidate_id'],
+                    "name": cand.name,
+                    "score": result.overall_score,
+                    "github_url": cand.github_url
+                })
+
+            if all_cached and cached_ranking and not force_eval:
+                logger.info("[DB CACHE HIT] Returning results from database.")
+                cached_ranking.sort(key=lambda x: x["score"], reverse=True)
+                for idx, item in enumerate(cached_ranking, 1):
+                    item["rank"] = idx
+                return {
+                    "ranking": cached_ranking,
+                    "evaluations": cached_evaluations
+                }
 
 
 
             logger.info(f"[PIPELINE] Invoking AI Recruitment Pipeline (Force Eval: {force_eval})")
             # Invoke the pipeline
             result = self.workflow.invoke({
-                "message": "Starting API-driven screening...",
+                "message": "Starting 3-Stage Funnel screening...",
                 "force_evaluation": force_eval,
                 "target_candidate_id": target_candidate_id,
-                "evaluation_weights": evaluation_weights,
-                "resumes": candidates_to_screen, # Pass injected resumes
-                "skip_llm_eval": skip_llm_eval
+                "job_description": active_jd.jd_text,
+                "resumes": candidates_to_screen,
             })
             
-            # Extract and Format results
+            # Extract and Format results — 3-Stage Funnel
             ranking_results = result.get("ranking_results", [])
+            stage_1_results = result.get("stage_1_results", {})
             llm_evaluations = result.get("llm_evaluations", {})
             github_raw_data = result.get("github_raw_data", {})
             github_features = result.get("github_features", {})
+            github_code_files = result.get("github_code_files", {})
             interview_readiness = result.get("interview_readiness", {})
             skeptic_analysis = result.get("skeptic_analysis", {})
-            final_synthesized_decision = result.get("final_synthesized_decision", {})
-            rag_metrics = result.get("rag_metrics", {})
-            rag_health_status = result.get("rag_health_status", {})
-            rag_gate_decisions = result.get("rag_gate_decisions", {})
-            ragas_metrics_full = result.get("ragas_metrics_full", {})
             
             # Save candidates and results to DB
-            logger.info("[SAVING SCREENING RESULT] Persisting intelligence to database.")
-            
-            # --- PHASE 1: Persistent Stage 1 Metrics for ALL evaluated candidates ---
-            # This ensures even non-shortlisted candidates have metrics in the grid
-            for cand_id, metrics in rag_metrics.items():
-                resume_obj = next((r for r in candidates_to_screen if r["candidate_id"] == cand_id), {})
-                email = resume_obj.get("email") or f"{cand_id.lower()}@example.com"
-                
-                db_cand = repository.get_candidate_by_email(db, email)
-                if not db_cand:
-                    db_cand = repository.create_candidate(
-                        db, 
-                        name=resume_obj.get("name", cand_id),
-                        email=email,
-                        github_url=resume_obj.get("links", {}).get("github", ""),
-                        linkedin_url=resume_obj.get("links", {}).get("linkedin", "")
-                    )
-                
-                if metrics:
-                    try:
-                        repository.save_rag_retrieval_metrics(db, db_cand.id, metrics)
-                    except Exception as e:
-                        logger.error(f"Failed to save deterministic retrieval metrics for {cand_id}: {str(e)}")
+            logger.info("[SAVING SCREENING RESULT] Persisting 3-Stage Funnel results to database.")
 
             formatted_ranking = []
             formatted_evaluations = {}
@@ -219,7 +163,7 @@ class PipelineService:
                 
                 # If target_candidate_id was provided and this is NOT the target candidate,
                 # we preserve their existing data from the database cache
-                if force_eval and target_candidate_id and cand_id != target_candidate_id:
+                if force_eval and target_candidate_id and cand_id.lower() != target_candidate_id.lower():
                     if cand_id in cached_evaluations:
                         formatted_evaluations[cand_id] = cached_evaluations[cand_id]
                         cached_item = next((r for r in cached_ranking if r["candidate_id"] == cand_id), None)
@@ -227,14 +171,17 @@ class PipelineService:
                             formatted_ranking.append(cached_item)
                     continue
 
+                stage_1_data = stage_1_results.get(cand_id, {})
                 eval_data = llm_evaluations.get(cand_id, {})
                 gh_feat = github_features.get(cand_id, {})
                 readiness_data = interview_readiness.get(cand_id, {})
                 skeptic_data = skeptic_analysis.get(cand_id, {})
-                final_decision_data = final_synthesized_decision.get(cand_id, {})
-                health = rag_health_status.get(cand_id, "CRITICAL")
-                metrics = rag_metrics.get(cand_id, {})
-                rag_override = False
+                
+                # Stage 1 scores
+                s1_scores = stage_1_data.get("stage_1_scores", {})
+                base_score = s1_scores.get("base_score", 0.0)
+                coverage = s1_scores.get("coverage_score", 0.0)
+                similarity = s1_scores.get("similarity_score", 0.0)
                 
                 # Get resume for metadata
                 resume_obj = next((r for r in candidates_to_screen if r["candidate_id"] == cand_id), {})
@@ -256,122 +203,107 @@ class PipelineService:
                     db_cand.linkedin_url = linkedin_url
                     db.commit()
                 
-                # Prepare Result Data
-                # Fallback: If Stage 2 LLM scores are missing (e.g. bypassed), use Stage 1 metrics
-                stage1_score_scaled = (metrics.get("overall_rag_score", 0.0) * 100) if metrics else 0
+                # Use Stage 3 overall_score if available, otherwise Stage 1 base_score
+                overall_score = eval_data.get("overall_score") if eval_data.get("overall_score") else int(base_score)
+                
+                # Combine hiring justification from Stage 1 and Stage 3
+                justification = eval_data.get("justification", [])
+                if not justification:
+                    justification = stage_1_data.get("hiring_justification", [])
+                
+                # Recommendation from skeptic or readiness data
+                recommendation = "PROCEED WITH CAUTION"
+                if readiness_data and readiness_data.get("readiness_level"):
+                    recommendation = readiness_data.get("readiness_level", "PROCEED WITH CAUTION")
                 
                 res_data = {
-                    "resume_score": eval_data.get("resume_score") if eval_data.get("resume_score") is not None else int(stage1_score_scaled),
+                    "resume_score": eval_data.get("resume_score") or int(coverage),
                     "github_score": eval_data.get("github_score", 0),
-                    "overall_score": eval_data.get("overall_score") if eval_data.get("overall_score") is not None else stage1_score_scaled,
+                    "overall_score": overall_score,
                     "risk_level": skeptic_data.get("risk_level", "LOW") if skeptic_data else "LOW",
                     "readiness_level": readiness_data.get("readiness_level", "MEDIUM") if readiness_data else "MEDIUM",
-                    "recommendation": final_decision_data.get("final_decision", "PROCEED WITH CAUTION") if final_decision_data else "PROCEED WITH CAUTION",
+                    "recommendation": recommendation,
                     "repo_count": github_raw_data.get(cand_id, {}).get("total_repos", 0),
                     "ai_projects": len(github_raw_data.get(cand_id, {}).get("ai_relevant_repos", [])),
                     "skill_gaps": readiness_data.get("skill_gaps", []) if readiness_data else [],
                     "interview_focus": readiness_data.get("interview_focus", []) if readiness_data else [],
                     "github_features": gh_feat,
-                    "repos": result.get("github_code_data", {}).get(cand_id, {}).get("repos", []),
+                    "repos": github_code_files.get(cand_id, {}).get("repos", []),
                     "interview_readiness": readiness_data if readiness_data else None,
                     "skeptic_analysis": skeptic_data if skeptic_data else None,
-                    "final_synthesized_decision": final_decision_data if final_decision_data else None,
                     "ai_evidence": eval_data.get("ai_evidence", []),
-                    "justification": eval_data.get("justification", []),
+                    "justification": justification,
                     "rank_position": idx,
-                    "retrieval_mode": "llama_index",
-                    "retrieval_version": settings.RETRIEVAL_VERSION,
+                    "retrieval_mode": "flash_single_pass",
+                    "retrieval_version": "v3_funnel",
                     "rag_enabled": True,
-                    "rag_status": "healthy" if health == "HEALTHY" else "failed",
-                    "rag_quality_status": health, # Keep legacy field for compatibility
-                    "rag_quality_score": metrics.get("overall_rag_score", 0.0),
-                    "rag_override": rag_override,
+                    "rag_status": "healthy",
+                    "rag_quality_status": "HEALTHY",
+                    "rag_quality_score": base_score / 100.0,
+                    "rag_override": False,
                     "judge_audit": eval_data.get("judge_audit", {}),
-                    "rubric_scores": eval_data.get("rubric_scores", {})
+                    "rubric_scores": eval_data.get("rubric_scores", {}),
+                    # Stage 1 specific data
+                    "stage_1_coverage": coverage,
+                    "stage_1_similarity": similarity,
+                    "stage_1_base_score": base_score,
+                    "stage_1_justification": stage_1_data.get("stage_1_justification", ""),
                 }
                 
                 # Save to DB
                 saved_res = repository.save_screening_result(db, db_cand.id, active_jd.id, res_data)
-                
-                # Save legacy RAG Metrics
-                legacy_metrics_payload = metrics.copy() if metrics else {}
-                
-                # Inject Stage 2 AI-Assessed Precision/Recall
-                if "precision_score" in eval_data:
-                    legacy_metrics_payload["precision_score"] = eval_data["precision_score"]
-                if "recall_score" in eval_data:
-                    legacy_metrics_payload["recall_score"] = eval_data["recall_score"]
 
-                if cand_id in ragas_metrics_full:
-                    rm = ragas_metrics_full[cand_id]
-                    if isinstance(rm, dict):
-                        legacy_metrics_payload.update({
-                            "recall": rm.get("recall", 0.0),
-                            "answer_relevancy": rm.get("answer_relevancy", 0.0),
-                        })
-                    else:
-                        legacy_metrics_payload.update({
-                            "recall": getattr(rm, "recall", 0.0),
-                            "answer_relevancy": getattr(rm, "answer_relevancy", 0.0),
-                        })
-                repository.save_rag_metrics(db, db_cand.id, saved_res.id, legacy_metrics_payload)
-                
-                # Deterministic Metrics already saved in Phase 1 above
-
-                # Process RAGAS evaluation queue or save override results
-                if cand_id in ragas_metrics_full:
-                    metric_data = ragas_metrics_full[cand_id]
-                    if isinstance(metric_data, dict) and metric_data.get("status") == "PENDING":
-                        job = repository.create_rag_evaluation_job(db, db_cand.id)
-                        logger.info(f"[JOB ENQUEUED] Pushed job {job.id} to background queue for {cand_id}")
-                    elif isinstance(metric_data, dict) and metric_data.get("status") == "OVERRIDE":
-                        pass # Nothing to save, it bypassed the gate
-                    else:
-                        try:
-                            # If it was actually evaluated, save it
-                            repository.save_rag_evaluation_result(db, db_cand.id, metric_data)
-                        except Exception as re:
-                            logger.error(f"Failed to save RAGAS metrics for {cand_id}: {str(re)}")
-
+                # Save Stage 1 metrics as RAG metrics (for compatibility with existing frontend)
+                stage1_metrics = {
+                    "coverage": coverage / 100.0,
+                    "similarity": similarity / 100.0,
+                    "diversity": 0.0,  # Not applicable in new architecture
+                    "density": 0.0,    # Not applicable in new architecture
+                    "overall_rag_score": base_score / 100.0,
+                    "rag_health_status": "HEALTHY",
+                    "chunk_count": 0,
+                    "jd_coverage_pct": coverage / 100.0,
+                }
+                try:
+                    repository.save_rag_retrieval_metrics(db, db_cand.id, stage1_metrics)
+                except Exception as e:
+                    logger.error(f"Failed to save Stage 1 metrics for {cand_id}: {str(e)}")
                 
                 # Format for API
                 formatted_ranking.append({
                     "candidate_id": cand_id,
                     "name": db_cand.name,
-                    "score": int(eval_data.get("overall_score", 0)),
+                    "score": overall_score,
                     "github_url": db_cand.github_url
                 })
                 
                 formatted_evaluations[cand_id] = {
-                    "overall_score": int(eval_data.get("overall_score", 0)),
-                    "resume_score": int(eval_data.get("resume_score", 0)),
+                    "overall_score": overall_score,
+                    "resume_score": int(eval_data.get("resume_score", 0)) or int(coverage),
                     "github_score": int(eval_data.get("github_score", 0)),
-                    "precision_score": int(eval_data.get("precision_score", 0)),
-                    "recall_score": int(eval_data.get("recall_score", 0)),
                     "repo_count": github_raw_data.get(cand_id, {}).get("total_repos", 0),
                     "ai_projects": len(github_raw_data.get(cand_id, {}).get("ai_relevant_repos", [])),
-                    "justification": eval_data.get("justification", []) or [eval_data.get("recommendation", "N/A")],
-                    "repos": result.get("github_code_data", {}).get(cand_id, {}).get("repos", []),
+                    "justification": justification,
+                    "repos": github_code_files.get(cand_id, {}).get("repos", []),
                     "interview_readiness": readiness_data if readiness_data else None,
                     "skeptic_analysis": skeptic_data if skeptic_data else None,
-                    "final_decision": final_decision_data.get("final_decision", "PROCEED WITH CAUTION") if final_decision_data else "PROCEED WITH CAUTION",
-                    "final_synthesized_decision": final_decision_data if final_decision_data else None,
+                    "final_decision": recommendation,
                     "hr_decision": {
                         "decision": saved_res.hr_decision,
                         "notes": saved_res.hr_notes
                     },
                     "ai_evidence": eval_data.get("ai_evidence", []),
-                    "rag_quality": {
-                        "status": getattr(saved_res, 'rag_status', 'failed') or 'failed',
-                        "score": metrics.get("overall_rag_score", 1.0) if metrics else 1.0
-                    },
-                    "evaluation_blocked": health != "HEALTHY",
+                    "evaluation_blocked": False,
                     "judge_audit": eval_data.get("judge_audit"),
                     "rubric_scores": eval_data.get("rubric_scores"),
                     "interview_status": "PENDING",
                     "evaluation_locked": False,
                     "interview_session_id": None,
-                    "rag_override": rag_override
+                    "rag_override": False,
+                    # Stage 1 data for frontend
+                    "stage_1_scores": s1_scores,
+                    "stage_1_justification": stage_1_data.get("stage_1_justification", ""),
+                    "hiring_justification": stage_1_data.get("hiring_justification", []),
                 }
             formatted_ranking.sort(key=lambda x: x["score"], reverse=True)
             for i, rank_item in enumerate(formatted_ranking, 1):
@@ -400,9 +332,27 @@ class PipelineService:
     async def force_evaluate(self, candidate_id: str, evaluation_weights: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
         """
         Force-run the pipeline by bypassing RAG quality gate.
+        Resolves candidate_id (GitHub username, roll number, or DB ID) to the canonical
+        roll_number so that the workflow's target_candidate_id matches ranking_results cand_id.
         """
         logger.info(f"[API] Force evaluating candidate: {candidate_id}")
-        return await self.run_screening(force_eval=True, target_candidate_id=candidate_id, evaluation_weights=evaluation_weights)
+        db = SessionLocal()
+        try:
+            # Resolve any fuzzy ID (GitHub username, email, etc.) → canonical roll number
+            cand = repository.get_candidate_by_fuzzy_id(db, candidate_id)
+            if cand:
+                # Get associated WoxsenCandidate to find roll_number (used as cand_id in ranking)
+                from app.db.models import WoxsenCandidate
+                wc = db.query(WoxsenCandidate).filter(WoxsenCandidate.email == cand.email).first()
+                resolved_id = wc.roll_number if wc else candidate_id
+                logger.info(f"[FORCE EVAL] Resolved '{candidate_id}' → '{resolved_id}'")
+            else:
+                resolved_id = candidate_id
+                logger.warning(f"[FORCE EVAL] Could not resolve '{candidate_id}', using as-is.")
+        finally:
+            db.close()
+
+        return await self.run_screening(force_eval=True, target_candidate_id=resolved_id, evaluation_weights=evaluation_weights)
 
     async def toggle_rag_override(self, candidate_id: str, override: bool) -> Dict[str, Any]:
         """
@@ -560,7 +510,9 @@ class PipelineService:
             sorted_stage2 = sorted(stage2_results, key=lambda x: (x.overall_score or 0.0, -(x.rank_position or 9999)), reverse=True)
             for idx, res in enumerate(sorted_stage2, 1):
                 cand = res.candidate
-                cand_id = cand.email.split('@')[0].upper()
+                from app.db.models import WoxsenCandidate
+                wc = db.query(WoxsenCandidate).filter(WoxsenCandidate.email == cand.email).first()
+                cand_id = wc.roll_number if wc else cand.email.split('@')[0].upper()
                 stage2_candidate_ids.add(cand.id)
 
                 metric_rec = repository.get_rag_retrieval_metrics(db, cand.id)
@@ -602,6 +554,7 @@ class PipelineService:
                         "status": "COMPLETED" if res.hr_decision else "PENDING"
                     },
                     "ai_evidence": safe_json_load(getattr(res, 'ai_evidence_json', None), []),
+                    "code_evidence": safe_json_load(getattr(res, 'ai_evidence_json', None), []),
                     "judge_audit": safe_json_load(getattr(res, 'judge_audit_json', None)),
                     "rubric_scores": safe_json_load(getattr(res, 'rubric_scores_json', None)),
                     "rag_quality": {
@@ -610,8 +563,18 @@ class PipelineService:
                         "metrics": metrics
                     },
                     "evaluation_blocked": (getattr(res, 'rag_status', 'CRITICAL') != "healthy") and not getattr(res, 'rag_override', False),
+                    "raw_resume_text": wc.raw_resume_text if wc else "",
+                    "github_features": safe_json_load(getattr(res, 'github_features_json', None), {}),
                     "stage": "stage2"
                 }
+
+                # Extract parsed GitHub rubric fields for direct frontend access
+                gh_features = formatted_evaluations[cand_id].get("github_features") or {}
+                if isinstance(gh_features, dict) and gh_features.get("rubric_scores"):
+                    formatted_evaluations[cand_id]["github_rubric"] = gh_features.get("rubric_scores", {})
+                    formatted_evaluations[cand_id]["github_strengths"] = gh_features.get("strengths", [])
+                    formatted_evaluations[cand_id]["github_weaknesses"] = gh_features.get("weaknesses", [])
+                    formatted_evaluations[cand_id]["github_justification"] = gh_features.get("github_justification", "")
 
             # --- Phase 2: Append Stage 1-only candidates (not shortlisted for Stage 2) ---
             all_stage1 = repository.list_all_rag_retrieval_metrics(db)
@@ -620,7 +583,10 @@ class PipelineService:
             stage2_count = len(formatted_ranking)
             for idx, m in enumerate(stage1_only, stage2_count + 1):
                 cand = m.candidate
-                cand_id = cand.email.split('@')[0].upper()
+                from app.db.models import WoxsenCandidate
+                wc = db.query(WoxsenCandidate).filter(WoxsenCandidate.email == cand.email).first()
+                cand_id = wc.roll_number if wc else cand.email.split('@')[0].upper()
+
 
                 metrics = {
                     "coverage": m.coverage,
@@ -674,54 +640,383 @@ class PipelineService:
 
     async def run_screening_stream(self, evaluation_weights: Optional[Dict[str, float]] = None):
         """
-        Runs the screening pipeline and yields progress updates as NDJSON.
-        Optimized to skip simulation on cache hits.
+        Real-time streaming pipeline with batch-of-5 processing.
+        Yields incremental NDJSON results as each batch completes.
         """
         import json
+        from core.stage1_flash_scorer import Stage1FlashScorer
+        from core.github_verifier import GitHubVerifier
+        from core.llm_service import LLMService
+
+        BATCH_SIZE = 5
+        FUNNEL_THRESHOLD = 60
+
         db = SessionLocal()
         try:
             active_jd = await self._get_or_create_active_jd(db)
-            
-            # Check for cache hit
-            candidates_to_screen = SAMPLE_RESUMES
-            all_cached = True
-            for res in candidates_to_screen:
-                email = f"{res['candidate_id'].lower()}@example.com"
-                cand = repository.get_candidate_by_email(db, email)
-                if not cand:
-                    all_cached = False
-                    break
-                result = repository.get_screening_result(db, cand.id, active_jd.id)
-                if not result:
-                    all_cached = False
-                    break
-            
-            if all_cached:
-                logger.info("[STREAM] Cache Hit detected. Skipping simulation.")
-                results = await self.run_screening(evaluation_weights=evaluation_weights)
-                yield json.dumps({"step": 8, "results": results}) + "\n"
+            jd_text = active_jd.jd_text
+
+            # Load candidates from DB
+            db_woxsen = repository.list_woxsen_candidates(db)
+            candidates = []
+            for wc in db_woxsen:
+                candidates.append({
+                    "candidate_id": wc.roll_number,
+                    "name": wc.name,
+                    "email": wc.email,
+                    "raw_resume_text": wc.raw_resume_text or "",
+                    "links": {
+                        "github": wc.github_url or "",
+                        "linkedin": wc.linkedin_url or ""
+                    }
+                })
+
+            total = len(candidates)
+            yield json.dumps({"step": 0, "status": "System Initialization", "total_candidates": total}) + "\n"
+            await asyncio.sleep(0.1)
+            yield json.dumps({"step": 1, "status": f"Loading {total} candidates"}) + "\n"
+            await asyncio.sleep(0.1)
+
+            # ================================================================
+            # STAGE 1: Flash Scoring — Batch of 5, stream after each batch
+            # ================================================================
+            yield json.dumps({"step": 2, "status": "Stage 1: Flash Extraction & Scoring"}) + "\n"
+
+            scorer = Stage1FlashScorer()
+            stage_1_results = {}
+            all_ranking = []
+            all_evaluations = {}
+
+            # Process in batches of 5
+            for batch_start in range(0, total, BATCH_SIZE):
+                batch = candidates[batch_start:batch_start + BATCH_SIZE]
+                batch_num = (batch_start // BATCH_SIZE) + 1
+                total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
+
+                logger.info(f"[STAGE 1] Batch {batch_num}/{total_batches} — scoring {len(batch)} candidates")
+
+                # Run batch concurrently
+                tasks = []
+                for cand in batch:
+                    tasks.append(scorer.score_candidate_async(
+                        candidate_id=cand["candidate_id"],
+                        resume_json=cand.get("raw_resume_text", ""),
+                        job_description=jd_text
+                    ))
+
+                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Process batch results
+                for cand, result in zip(batch, batch_results):
+                    cand_id = cand["candidate_id"]
+
+                    if isinstance(result, Exception):
+                        logger.error(f"[STAGE 1] Error for {cand_id}: {result}")
+                        result = {
+                            "stage_1_scores": {"coverage_score": 0, "similarity_score": 0, "base_score": 0},
+                            "stage_1_justification": f"Error: {result}",
+                            "hiring_justification": [f"🔴 Scoring failed: {result}"],
+                            "extracted_skills": [],
+                            "experience_level": "Unknown",
+                            "domain_match": "None"
+                        }
+
+                    stage_1_results[cand_id] = result
+                    s1_scores = result.get("stage_1_scores", {})
+                    base_score = s1_scores.get("base_score", 0.0)
+
+                    # Save candidate to DB
+                    email = cand.get("email") or f"{cand_id.lower()}@example.com"
+                    db_cand = repository.get_candidate_by_email(db, email)
+                    if not db_cand:
+                        db_cand = repository.create_candidate(
+                            db,
+                            name=cand.get("name", cand_id),
+                            email=email,
+                            github_url=cand.get("links", {}).get("github", ""),
+                            linkedin_url=cand.get("links", {}).get("linkedin", "")
+                        )
+
+                    all_ranking.append({
+                        "candidate_id": cand_id,
+                        "name": cand.get("name", cand_id),
+                        "score": int(base_score),
+                        "github_url": cand.get("links", {}).get("github", "")
+                    })
+
+                    all_evaluations[cand_id] = {
+                        "overall_score": int(base_score),
+                        "resume_score": int(s1_scores.get("coverage_score", 0)),
+                        "github_score": 0,
+                        "repo_count": 0,
+                        "ai_projects": 0,
+                        "justification": result.get("hiring_justification", []),
+                        "repos": [],
+                        "interview_readiness": None,
+                        "skeptic_analysis": None,
+                        "final_decision": "STAGE 1 SCORED",
+                        "hr_decision": {"decision": None, "notes": None},
+                        "ai_evidence": [],
+                        "evaluation_blocked": False,
+                        "judge_audit": None,
+                        "rubric_scores": None,
+                        "interview_status": "PENDING",
+                        "evaluation_locked": False,
+                        "interview_session_id": None,
+                        "rag_override": False,
+                        "stage_1_scores": s1_scores,
+                        "stage_1_justification": result.get("stage_1_justification", ""),
+                        "hiring_justification": result.get("hiring_justification", []),
+                        "raw_resume_text": cand.get("raw_resume_text", ""),
+                    }
+
+                # Sort ranking after each batch and stream
+                all_ranking.sort(key=lambda x: x["score"], reverse=True)
+                for i, r in enumerate(all_ranking, 1):
+                    r["rank"] = i
+
+                yield json.dumps({
+                    "step": 2,
+                    "status": f"Stage 1: Scored {min(batch_start + BATCH_SIZE, total)}/{total} candidates",
+                    "partial_results": {
+                        "ranking": all_ranking,
+                        "evaluations": all_evaluations
+                    }
+                }) + "\n"
+
+            # ================================================================
+            # FINALIZE: Save all Stage 1 results to DB
+            # ================================================================
+            yield json.dumps({"step": 3, "status": "Saving Stage 1 results to database"}) + "\n"
+
+            for cand in candidates:
+                cand_id = cand["candidate_id"]
+                email = cand.get("email") or f"{cand_id.lower()}@example.com"
+                db_cand = repository.get_candidate_by_email(db, email)
+                if db_cand:
+                    s1 = stage_1_results.get(cand_id, {})
+                    s1_scores = s1.get("stage_1_scores", {})
+                    res_data = {
+                        "resume_score": int(s1_scores.get("coverage_score", 0)),
+                        "github_score": 0,
+                        "overall_score": int(s1_scores.get("base_score", 0)),
+                        "risk_level": "PENDING",
+                        "readiness_level": "PENDING",
+                        "recommendation": "STAGE 1 SCORED",
+                        "repo_count": 0,
+                        "ai_projects": 0,
+                        "skill_gaps": [],
+                        "interview_focus": [],
+                        "github_features": {},
+                        "repos": [],
+                        "interview_readiness": None,
+                        "skeptic_analysis": None,
+                        "ai_evidence": [],
+                        "justification": s1.get("hiring_justification", []),
+                        "rank_position": next((r["rank"] for r in all_ranking if r["candidate_id"] == cand_id), 0),
+                        "retrieval_mode": "flash_single_pass",
+                        "retrieval_version": "v3_funnel",
+                        "rag_enabled": True,
+                        "rag_status": "healthy",
+                        "rag_quality_status": "HEALTHY",
+                        "rag_quality_score": s1_scores.get("base_score", 0) / 100.0,
+                        "rag_override": False,
+                        "judge_audit": {},
+                        "rubric_scores": {},
+                        "stage_1_coverage": s1_scores.get("coverage_score", 0),
+                        "stage_1_similarity": s1_scores.get("similarity_score", 0),
+                        "stage_1_base_score": s1_scores.get("base_score", 0),
+                        "stage_1_justification": s1.get("stage_1_justification", ""),
+                    }
+                    try:
+                        repository.save_screening_result(db, db_cand.id, active_jd.id, res_data)
+                    except Exception as e:
+                        logger.error(f"[DB] Failed to save result for {cand_id}: {e}")
+
+            # Final results
+            all_ranking.sort(key=lambda x: x["score"], reverse=True)
+            for i, r in enumerate(all_ranking, 1):
+                r["rank"] = i
+
+            final_results = {
+                "ranking": all_ranking,
+                "evaluations": all_evaluations
+            }
+
+            yield json.dumps({"step": 6, "results": final_results}) + "\n"
+            logger.info(f"[STREAM] Stage 1 complete. {total} candidates scored.")
+
+        except Exception as e:
+            logger.error(f"[STREAM] Pipeline error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            yield json.dumps({"error": str(e)}) + "\n"
+        finally:
+            db.close()
+
+    # ================================================================
+    # STAGE 2: GitHub Verification — Manually Triggered
+    # ================================================================
+    async def run_stage_2_stream(self):
+        """
+        Stream Stage 2 GitHub verification for Top 60 candidates.
+        Processes in batches of 5, yields NDJSON with partial_results.
+        """
+        from core.stage2_github_agent import Stage2GitHubAgent
+        from app.db.models import WoxsenCandidate
+
+        BATCH_SIZE = 5
+        TOP_N = 60
+
+        db = SessionLocal()
+        try:
+            yield json.dumps({"step": 0, "status": "Loading Stage 1 results..."}) + "\n"
+
+            active_jd = await self._get_or_create_active_jd(db)
+            jd_text = active_jd.jd_text
+
+            # Load Top 60 by overall_score
+            all_results = repository.list_screening_results(db, active_jd.id)
+            sorted_results = sorted(all_results, key=lambda x: (x.overall_score or 0), reverse=True)
+            top_results = sorted_results[:TOP_N]
+
+            if not top_results:
+                yield json.dumps({"error": "No Stage 1 results found. Run Stage 1 first."}) + "\n"
                 return
 
-            # If not cached, yield progress stages
-            stages = [
-                {"step": 0, "status": "System Initialization"},
-                {"step": 1, "status": "Data Ingestion"},
-                {"step": 2, "status": "Semantic Indexing"},
-                {"step": 3, "status": "Neural Retrieval"},
-                {"step": 4, "status": "GitHub Validation"},
-                {"step": 5, "status": "Holistic Evaluation"},
-                {"step": 6, "status": "Readiness Audit"},
-                {"step": 7, "status": "Skeptic Review"},
-                {"step": 8, "status": "Decision Synthesis"}
-            ]
-            
-            for stage in stages:
-                yield json.dumps(stage) + "\n"
-                await asyncio.sleep(0.4)
+            logger.info(f"[STAGE 2] Starting GitHub verification for {len(top_results)} candidates")
 
-            results = await self.run_screening(evaluation_weights=evaluation_weights)
-            yield json.dumps({"step": 8, "results": results}) + "\n"
+            agent = Stage2GitHubAgent()
+            total = len(top_results)
+            all_ranking = []
+            all_evaluations = {}
+
+            # Build initial ranking from existing DB data
+            for idx, res in enumerate(top_results, 1):
+                cand = res.candidate
+                wc = db.query(WoxsenCandidate).filter(WoxsenCandidate.email == cand.email).first()
+                cand_id = wc.roll_number if wc else cand.email.split("@")[0].upper()
+                github_url = cand.github_url or (wc.github_url if wc else "")
+
+                all_ranking.append({
+                    "rank": idx,
+                    "candidate_id": cand_id,
+                    "name": cand.name,
+                    "score": int(res.overall_score or 0),
+                    "github_url": github_url,
+                })
+                all_evaluations[cand_id] = {
+                    "candidate_id": cand_id,
+                    "db_candidate_id": cand.id,
+                    "db_result_id": res.id,
+                    "github_url": github_url,
+                    "overall_score": int(res.overall_score or 0),
+                    "resume_score": int(res.resume_score or 0),
+                    "github_score": int(res.github_score or 0),
+                    "justification": json.loads(res.justification_json) if res.justification_json else [],
+                    "raw_resume_text": wc.raw_resume_text if wc else "",
+                }
+
+            yield json.dumps({
+                "step": 1,
+                "status": f"Stage 2: GitHub Verification for Top {total} candidates",
+                "partial_results": {"ranking": all_ranking, "evaluations": all_evaluations},
+            }) + "\n"
+
+            # Process in batches
+            for batch_start in range(0, total, BATCH_SIZE):
+                batch = list(all_evaluations.items())[batch_start:batch_start + BATCH_SIZE]
+                batch_num = (batch_start // BATCH_SIZE) + 1
+                total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
+
+                logger.info(f"[STAGE 2] Batch {batch_num}/{total_batches}")
+                yield json.dumps({
+                    "step": 2,
+                    "status": f"Stage 2: Batch {batch_num}/{total_batches} — Analyzing GitHub profiles",
+                }) + "\n"
+
+                # Run batch concurrently
+                tasks = []
+                for cand_id, eval_data in batch:
+                    github_url = eval_data.get("github_url", "")
+                    tasks.append(agent.evaluate_async(cand_id, github_url, jd_text))
+
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Process results
+                for (cand_id, eval_data), result in zip(batch, results):
+                    if isinstance(result, Exception):
+                        logger.error(f"[STAGE 2] Exception for {cand_id}: {result}")
+                        result = agent._empty_result(str(result))
+
+                    gh_score = result.get("github_score", 0)
+                    stage1_score = eval_data.get("resume_score", 0)
+                    # Combined: 60% resume + 40% github
+                    combined = int(stage1_score * 0.6 + gh_score * 0.4)
+
+                    all_evaluations[cand_id].update({
+                        "github_score": gh_score,
+                        "overall_score": combined,
+                        "repo_count": result.get("repo_count", 0),
+                        "ai_projects": result.get("ai_projects", 0),
+                        "repos": result.get("repos", []),
+                        "code_evidence": result.get("code_evidence", []),
+                        "github_rubric": result.get("rubric_scores", {}),
+                        "github_strengths": result.get("strengths", []),
+                        "github_weaknesses": result.get("weaknesses", []),
+                        "github_justification": result.get("github_justification", ""),
+                    })
+
+                    # Update ranking score
+                    for r in all_ranking:
+                        if r["candidate_id"] == cand_id:
+                            r["score"] = combined
+                            break
+
+                    # Persist to DB — update the existing screening_result row
+                    try:
+                        existing = db.query(ScreeningResult).get(eval_data["db_result_id"])
+                        if existing:
+                            existing.github_score = gh_score
+                            existing.overall_score = combined
+                            existing.repo_count = result.get("repo_count", 0)
+                            existing.ai_projects = result.get("ai_projects", 0)
+                            existing.repos_json = json.dumps(result.get("repos", []))
+                            existing.ai_evidence_json = json.dumps(result.get("code_evidence", []))
+                            existing.github_features_json = json.dumps({
+                                "rubric_scores": result.get("rubric_scores", {}),
+                                "strengths": result.get("strengths", []),
+                                "weaknesses": result.get("weaknesses", []),
+                                "github_justification": result.get("github_justification", ""),
+                                "github_username": result.get("github_username"),
+                            })
+                            db.commit()
+                    except Exception as e:
+                        logger.error(f"[STAGE 2] DB update failed for {cand_id}: {e}")
+                        db.rollback()
+
+                # Re-sort and stream after each batch
+                all_ranking.sort(key=lambda x: x["score"], reverse=True)
+                for i, r in enumerate(all_ranking, 1):
+                    r["rank"] = i
+
+                yield json.dumps({
+                    "step": 2,
+                    "status": f"Stage 2: {min(batch_start + BATCH_SIZE, total)}/{total} candidates verified",
+                    "partial_results": {"ranking": all_ranking, "evaluations": all_evaluations},
+                }) + "\n"
+
+            # Final results
+            yield json.dumps({
+                "step": 6,
+                "results": {"ranking": all_ranking, "evaluations": all_evaluations},
+            }) + "\n"
+            logger.info(f"[STAGE 2] Complete. {total} candidates GitHub-verified.")
+
         except Exception as e:
+            logger.error(f"[STAGE 2] Pipeline error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             yield json.dumps({"error": str(e)}) + "\n"
         finally:
             db.close()

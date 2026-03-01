@@ -37,26 +37,52 @@ Watch out: roll number lookup hits the woxsen_candidates table.
 
 ---
 
-## 2. Branching Strategy
+## 2. Branching Strategy — Company 3-Stage Hierarchy
 
-### Long-Running Branches
-- `main` — production-ready code only
-- `develop` — active integration branch for features
+### The 3 Long-Running Branches (NEVER commit to these directly)
 
-**Rule:** Never commit directly to `main`. All changes arrive via PR/merge after review.
+| Branch | Purpose | Who merges into it |
+|---|---|---|
+| `main` | **Production** — live code, always stable | QA lead / team lead via PR from `qa` |
+| `qa` | **Testing / Staging** — code ready for QA review | Developer via PR from `dev` |
+| `dev` | **Development** — active integration of features | Developer via PR from `feature/*` branch |
 
-### Short-Lived Branches
-- Create for: new features, bug fixes, experiments, refactors
-- Name format: `feature/<short-description>`, `fix/<issue>`, `chore/<task>`
-- **Always delete after merging.**
+**Promotion flow:**
+```
+feature/your-feature  →  dev  →  qa  →  main
+       (develop)         (QA)        (production)
+```
 
-### Workflow (GitHub Flow — this project)
-1. Branch off `main` (or `develop`)
-2. Make focused commits on your branch
-3. Open a Pull Request for review
-4. Merge after approval → delete branch
+### Short-Lived Feature Branches (where all actual work happens)
+
+- **Always branch off `dev`** — never off `qa` or `main`
+- Naming format:
+  - `feature/<short-description>` — new functionality
+  - `fix/<short-description>` — bug fixes
+  - `chore/<short-description>` — refactors, cleanup, config
+- **Always delete after merging into `dev`**
+
+### Step-by-Step Workflow
+
+```
+1. git checkout dev
+2. git pull origin dev                    ← always sync first
+3. git checkout -b feature/my-feature    ← create your feature branch
+4. [make focused commits]
+5. git push origin feature/my-feature
+6. Open PR: feature/my-feature → dev    ← code review here
+7. After merge → delete feature branch
+8. When dev is stable → PR: dev → qa    ← QA testing
+9. After QA passes → PR: qa → main      ← production
+```
+
+### Rules
+- ❌ Never commit directly to `main`, `qa`, or `dev`
+- ❌ Never open a PR that skips a stage (e.g., feature → main directly)
+- ✅ All code reaches `main` only after passing through `dev` and `qa`
 
 ---
+
 
 ## 3. Pull Requests
 

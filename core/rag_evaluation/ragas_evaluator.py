@@ -115,7 +115,7 @@ class EnterpriseRAGASEvaluator:
         try:
             llm = LangchainLLMWrapper(
                 ChatGoogleGenerativeAI(
-                    model="gemini-2.5-flash-lite",
+                    model="gemini-2.5-pro",
                     google_api_key=core_settings.GOOGLE_API_KEY,
                     temperature=0.0,
                     request_timeout=25,
